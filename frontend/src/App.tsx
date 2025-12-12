@@ -1,20 +1,24 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./AuthContext";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import Homepage from "./pages/Homepage";
+import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import AdminPanel from "./pages/AdminPanel";
+import Olympiads from "./pages/Olympiads";
+import Results from "./pages/Results";
 import PrivateRoute from "./components/PrivateRoute";
 import AdminRoute from "./components/AdminRoute";
+import Navbar from "./components/Navbar";
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <Navbar />
         <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/" element={<Homepage />} />
+          <Route path="/login" element={<Auth />} />
+          <Route path="/register" element={<Navigate to="/login" replace state={{ showRegister: true }} />} />
           <Route
             path="/profile"
             element={
@@ -29,6 +33,22 @@ function App() {
               <AdminRoute>
                 <AdminPanel />
               </AdminRoute>
+            }
+          />
+          <Route
+            path="/olympiads"
+            element={
+              <PrivateRoute>
+                <Olympiads />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/results"
+            element={
+              <PrivateRoute>
+                <Results />
+              </PrivateRoute>
             }
           />
         </Routes>

@@ -1,7 +1,6 @@
 type MessageValue = string | ((...args: string[]) => string);
 
 export const messages = {
-  // Success messages (S)
   S001: (object: string) => `${object} veiksmīgi izveidots`,
   S002: (object: string) => `${object} veiksmīgi rediģēts`,
   S003: (object: string) => `${object} veiksmīgi izdzēsts`,
@@ -15,7 +14,6 @@ export const messages = {
   S011: "Rezultāti veiksmīgi ielādēti",
   S012: "Rezultāti publicēti",
 
-  // Error messages (E)
   E001: (field: string) => `${field} jābūt aizpildītam`,
   E002: (value: string) => `${value} pārsniedz atļauto garumu`,
   E003: (value: string) => `${value} jau tiek izmantots citam profilam`,

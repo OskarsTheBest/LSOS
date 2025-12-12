@@ -1,11 +1,10 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:8000", // your Django backend
+  baseURL: "http://localhost:8000",
   withCredentials: false,
 });
 
-// Auto-attach token
 api.interceptors.request.use(config => {
   const access = localStorage.getItem("access");
   if (access) {
@@ -14,7 +13,6 @@ api.interceptors.request.use(config => {
   return config;
 });
 
-// Auto-refresh token
 api.interceptors.response.use(
   res => res,
   async err => {

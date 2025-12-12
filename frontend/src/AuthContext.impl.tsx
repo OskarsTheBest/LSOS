@@ -33,11 +33,11 @@ type AdminUserUpdatePayload = {
 interface AuthContextType {
   user: User | null;
   login(email: string, password: string): Promise<void>;
-  register(email: string, password: string): Promise<void>;
+  register(email: string, password: string, name?: string, last_name?: string, number?: string): Promise<void>;
   logout(): void;
   getProfile(): Promise<void>;
   updateProfile(data: ProfileUpdatePayload): Promise<void>;
-  // Admin functions
+  changePassword(oldPassword: string, newPassword: string, confirmPassword: string): Promise<void>;
   searchUsers(search?: string): Promise<User[]>;
   createUser(data: AdminUserCreatePayload): Promise<User>;
   updateUser(userId: number, data: AdminUserUpdatePayload): Promise<User>;
@@ -57,8 +57,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await getProfile();
   }
 
-  async function register(email: string, password: string) {
-    await api.post("/api/register/", { email, password });
+  async function register(email: string, password: string, name?: string, last_name?: string, number?: string) {
+    await api.post("/api/register/", { email, password, name, last_name, number });
   }
 
   async function getProfile() {
@@ -67,7 +67,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(res.data);
     } catch (e) {
       setUser(null);
-      // Don't clear localStorage on profile fetch failure - might be network issue
     }
   }
 
@@ -80,12 +79,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }
 
+  async function changePassword(oldPassword: string, newPassword: string, confirmPassword: string) {
+    await api.post("/api/profile/change-password/", {
+      old_password: oldPassword,
+      new_password: newPassword,
+      confirm_password: confirmPassword
+    });
+  }
+
   function logout() {
     localStorage.clear();
     setUser(null);
   }
 
-  // Admin functions
   async function searchUsers(search?: string): Promise<User[]> {
     const params = search ? { search } : {};
     const res = await api.get("/api/admin/users/", { params });
@@ -114,7 +120,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{ 
-      user, login, register, logout, getProfile, updateProfile,
+      user, login, register, logout, getProfile, updateProfile, changePassword,
       searchUsers, createUser, updateUser, deleteUser
     }}>
       {children}

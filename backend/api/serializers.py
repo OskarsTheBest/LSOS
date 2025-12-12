@@ -22,7 +22,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['email', 'name', 'last_name', 'number', 'user_type']
+        fields = ['id', 'email', 'name', 'last_name', 'number', 'user_type']
 
 
 class ProfileUpdateSerializer(serializers.ModelSerializer):
@@ -34,7 +34,6 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
         }
 
     def validate_user_type(self, value):
-        # Only allow admins to change user_type
         request = self.context.get('request')
         if request and hasattr(request, 'user'):
             if request.user.user_type != 'admin':
@@ -74,7 +73,6 @@ class AdminUserSerializer(serializers.ModelSerializer):
         return value
     
     def validate_email(self, value):
-        # Check if email is already in use (excluding current instance if updating)
         instance = self.instance
         if instance and instance.email == value:
             return value
@@ -83,8 +81,6 @@ class AdminUserSerializer(serializers.ModelSerializer):
         return value
     
     def validate_user_type(self, value):
-        # Admins can change any user type, so no restriction needed here
-        # The permission check is done at the view level
         if value not in ['normal', 'teacher', 'admin']:
             raise serializers.ValidationError("Nepareizs lietotāja tips")
         return value
@@ -97,17 +93,32 @@ class AdminUserSerializer(serializers.ModelSerializer):
         return user
     
     def update(self, instance, validated_data):
-        # Only update fields that are provided
         password = validated_data.pop('password', None)
         if password:
             instance.set_password(password)
         
-        # Update only provided fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         
         instance.save()
         return instance
+
+
+class PasswordChangeSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True, write_only=True)
+    new_password = serializers.CharField(required=True, write_only=True, min_length=8)
+    confirm_password = serializers.CharField(required=True, write_only=True)
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError({"confirm_password": "Parolēm jāsakrīt"})
+        return attrs
+
+    def validate_old_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Nepareiza vecā parole")
+        return value
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):

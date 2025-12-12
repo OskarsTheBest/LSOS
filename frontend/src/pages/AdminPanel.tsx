@@ -14,7 +14,6 @@ export default function AdminPanel() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   
-  // Create user form state
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createFormData, setCreateFormData] = useState({
     email: "",
@@ -25,11 +24,8 @@ export default function AdminPanel() {
     user_type: "normal"
   });
   
-  // Edit user state
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [editFormData, setEditFormData] = useState({
-    user_type: "normal"
-  });
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [editFormDataMap, setEditFormDataMap] = useState<Record<number, { user_type: string }>>({});
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -80,7 +76,6 @@ export default function AdminPanel() {
     setError("");
     setSuccess("");
     
-    // Validation
     if (!createFormData.email) {
       setError(messages.E001("E-pasts"));
       return;
@@ -116,46 +111,56 @@ export default function AdminPanel() {
   }
 
   function handleEditClick(user: User) {
-    setEditingUser(user);
-    setEditFormData({
-      user_type: user.user_type || "normal"
+    if (!user.id) return;
+    setEditingUserId(user.id);
+    setEditFormDataMap({
+      ...editFormDataMap,
+      [user.id]: {
+        user_type: user.user_type || "normal"
+      }
     });
     setError("");
     setSuccess("");
   }
 
   function handleCancelEdit() {
-    setEditingUser(null);
-    setEditFormData({ user_type: "normal" });
+    if (editingUserId) {
+      const newMap = { ...editFormDataMap };
+      delete newMap[editingUserId];
+      setEditFormDataMap(newMap);
+    }
+    setEditingUserId(null);
   }
 
   async function handleUpdateUser(userId: number) {
-    if (!editingUser || editingUser.id !== userId) {
+    if (editingUserId !== userId) {
       setError("Kļūda: nepareizs lietotājs");
+      return;
+    }
+    
+    const editFormData = editFormDataMap[userId];
+    if (!editFormData) {
+      setError("Kļūda: nav atrasti rediģēšanas dati");
       return;
     }
     
     setError("");
     setSuccess("");
     
-    // Debug: log what we're sending
-    console.log("Updating user:", userId, "with data:", editFormData);
-    
     try {
-      const updatedUser = await updateUser(userId, editFormData);
-      console.log("Updated user response:", updatedUser);
+      await updateUser(userId, editFormData);
       
       setSuccess(messages.S002("Lietotājs"));
-      setEditingUser(null);
-      setEditFormData({ user_type: "normal" });
       
-      // If we updated the current user's type, refresh their profile to update permissions
+      const newMap = { ...editFormDataMap };
+      delete newMap[userId];
+      setEditFormDataMap(newMap);
+      setEditingUserId(null);
+      
       if (userId === user?.id && editFormData.user_type) {
-        // Refresh current user profile to get updated user_type
         await getProfile();
       }
       
-      // Reload users list after profile refresh
       await loadUsers();
     } catch (err: any) {
       console.error("Update error:", err);
@@ -203,90 +208,97 @@ export default function AdminPanel() {
   }
 
   return (
-    <div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-        <h2>Administratora panelis</h2>
-        <div style={{ display: "flex", gap: "10px" }}>
-          <button onClick={() => navigate("/profile")} style={{ padding: "10px 20px" }}>Profils</button>
-          <button onClick={handleLogout} style={{ padding: "10px 20px" }}>Iziet</button>
+    <div className="p-5 max-w-[1200px] mx-auto mt-20">
+      <div className="flex justify-between items-center mb-5">
+        <h2 className="text-2xl text-white">Administratora panelis</h2>
+        <div className="flex gap-2.5">
+          <button onClick={() => navigate("/profile")} className="px-5 py-2.5 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors">
+            Profils
+          </button>
+          <button onClick={handleLogout} className="px-5 py-2.5 bg-red-500 text-white rounded hover:bg-red-600 transition-colors">
+            Iziet
+          </button>
         </div>
       </div>
 
-      {error && <div style={{ color: "red", marginBottom: "10px", padding: "10px", backgroundColor: "#ffebee", borderRadius: "4px" }}>{error}</div>}
-      {success && <div style={{ color: "green", marginBottom: "10px", padding: "10px", backgroundColor: "#e8f5e9", borderRadius: "4px" }}>{success}</div>}
+      {error && <div className="text-red-500 mb-2.5 p-2.5 bg-red-50 rounded">{error}</div>}
+      {success && <div className="text-green-500 mb-2.5 p-2.5 bg-green-50 rounded">{success}</div>}
 
-      <div style={{ marginBottom: "20px", display: "flex", gap: "10px", alignItems: "center" }}>
+      <div className="mb-5 flex gap-2.5 items-center">
         <input
           type="text"
           placeholder="Meklēt lietotājus (e-pasts, vārds, uzvārds, numurs)..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ flex: 1, padding: "8px", border: "1px solid #ccc", borderRadius: "4px" }}
+          className="flex-1 p-2 border border-gray-300 rounded"
         />
-        <button onClick={() => setShowCreateForm(!showCreateForm)} style={{ padding: "10px 20px", backgroundColor: "#4CAF50", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+        <button 
+          onClick={() => setShowCreateForm(!showCreateForm)} 
+          className="px-5 py-2.5 bg-green-500 text-white border-none rounded cursor-pointer hover:bg-green-600 transition-colors"
+        >
           {showCreateForm ? "Atcelt" : "Izveidot lietotāju"}
         </button>
       </div>
 
       {showCreateForm && (
-        <div style={{ marginBottom: "20px", padding: "20px", border: "1px solid #ccc", borderRadius: "4px", backgroundColor: "#f9f9f9" }}>
-          <h3>Izveidot jaunu lietotāju</h3>
+        <div className="mb-5 p-5 border border-gray-300 rounded bg-gray-50">
+          <h3 className="mb-4 text-lg font-semibold">Izveidot jaunu lietotāju</h3>
           <form onSubmit={handleCreateUser}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "15px" }}>
+            <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>E-pasts *</label>
+                <label className="block mb-1.5 font-bold">E-pasts *</label>
                 <input
                   type="email"
                   value={createFormData.email}
                   onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
                   required
-                  style={{ width: "100%", padding: "8px", border: "1px solid #ccc", borderRadius: "4px" }}
+                  className="w-full p-2 border border-gray-300 rounded"
                 />
               </div>
               <div>
-                <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>Parole *</label>
+                <label className="block mb-1.5 font-bold">Parole *</label>
                 <input
                   type="password"
                   value={createFormData.password}
                   onChange={(e) => setCreateFormData({ ...createFormData, password: e.target.value })}
                   required
-                  style={{ width: "100%", padding: "8px", border: "1px solid #ccc", borderRadius: "4px" }}
+                  className="w-full p-2 border border-gray-300 rounded"
                 />
               </div>
               <div>
-                <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>Vārds</label>
+                <label className="block mb-1.5 font-bold">Vārds</label>
                 <input
                   type="text"
                   value={createFormData.name}
                   onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
-                  style={{ width: "100%", padding: "8px", border: "1px solid #ccc", borderRadius: "4px" }}
+                  className="w-full p-2 border border-gray-300 rounded"
                 />
               </div>
               <div>
-                <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>Uzvārds</label>
+                <label className="block mb-1.5 font-bold">Uzvārds</label>
                 <input
                   type="text"
                   value={createFormData.last_name}
                   onChange={(e) => setCreateFormData({ ...createFormData, last_name: e.target.value })}
-                  style={{ width: "100%", padding: "8px", border: "1px solid #ccc", borderRadius: "4px" }}
+                  className="w-full p-2 border border-gray-300 rounded"
                 />
               </div>
               <div>
-                <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>Tālrunis</label>
+                <label className="block mb-1.5 font-bold">Tālrunis</label>
                 <input
                   type="text"
                   value={createFormData.number}
                   onChange={(e) => setCreateFormData({ ...createFormData, number: e.target.value })}
                   placeholder="+37112345678"
-                  style={{ width: "100%", padding: "8px", border: "1px solid #ccc", borderRadius: "4px" }}
+                  className="w-full p-2 border border-gray-300 rounded"
                 />
               </div>
               <div>
-                <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>Lietotāja tips</label>
+                <label className="block mb-1.5 font-bold">Lietotāja tips</label>
                 <select
                   value={createFormData.user_type}
                   onChange={(e) => setCreateFormData({ ...createFormData, user_type: e.target.value })}
-                  style={{ width: "100%", padding: "8px", border: "1px solid #ccc", borderRadius: "4px" }}
+                  className="w-full p-2 border border-gray-300 rounded"
                 >
                   <option value="normal">Normal (R)</option>
                   <option value="teacher">Teacher (S)</option>
@@ -294,7 +306,7 @@ export default function AdminPanel() {
                 </select>
               </div>
             </div>
-            <button type="submit" style={{ padding: "10px 20px", backgroundColor: "#4CAF50", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+            <button type="submit" className="px-5 py-2.5 bg-green-500 text-white border-none rounded cursor-pointer hover:bg-green-600 transition-colors">
               Izveidot
             </button>
           </form>
@@ -302,35 +314,40 @@ export default function AdminPanel() {
       )}
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: "20px" }}>Ielādē...</div>
+        <div className="text-center p-5 text-white">Ielādē...</div>
       ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", backgroundColor: "white" }}>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse bg-white">
             <thead>
-              <tr style={{ backgroundColor: "#f5f5f5" }}>
-                <th style={{ padding: "12px", textAlign: "left", border: "1px solid #ddd" }}>E-pasts</th>
-                <th style={{ padding: "12px", textAlign: "left", border: "1px solid #ddd" }}>Vārds</th>
-                <th style={{ padding: "12px", textAlign: "left", border: "1px solid #ddd" }}>Uzvārds</th>
-                <th style={{ padding: "12px", textAlign: "left", border: "1px solid #ddd" }}>Tālrunis</th>
-                <th style={{ padding: "12px", textAlign: "left", border: "1px solid #ddd" }}>Tips</th>
-                <th style={{ padding: "12px", textAlign: "left", border: "1px solid #ddd" }}>Darbības</th>
+              <tr className="bg-gray-100">
+                <th className="p-3 text-left border border-gray-300">E-pasts</th>
+                <th className="p-3 text-left border border-gray-300">Vārds</th>
+                <th className="p-3 text-left border border-gray-300">Uzvārds</th>
+                <th className="p-3 text-left border border-gray-300">Tālrunis</th>
+                <th className="p-3 text-left border border-gray-300">Tips</th>
+                <th className="p-3 text-left border border-gray-300">Darbības</th>
               </tr>
             </thead>
             <tbody>
               {users.map((u) => {
-                const isEditingThisUser = editingUser?.id === u.id;
+                if (!u.id) return null;
+                const isEditingThisUser = editingUserId === u.id;
+                const currentEditData = editFormDataMap[u.id] || { user_type: u.user_type || "normal" };
                 return (
                 <tr key={u.id}>
-                  <td style={{ padding: "12px", border: "1px solid #ddd" }}>{u.email}</td>
-                  <td style={{ padding: "12px", border: "1px solid #ddd" }}>{u.name || "-"}</td>
-                  <td style={{ padding: "12px", border: "1px solid #ddd" }}>{u.last_name || "-"}</td>
-                  <td style={{ padding: "12px", border: "1px solid #ddd" }}>{u.number || "-"}</td>
-                  <td style={{ padding: "12px", border: "1px solid #ddd" }}>
+                  <td className="p-3 border border-gray-300">{u.email}</td>
+                  <td className="p-3 border border-gray-300">{u.name || "-"}</td>
+                  <td className="p-3 border border-gray-300">{u.last_name || "-"}</td>
+                  <td className="p-3 border border-gray-300">{u.number || "-"}</td>
+                  <td className="p-3 border border-gray-300">
                     {isEditingThisUser ? (
                       <select
-                        value={editFormData.user_type}
-                        onChange={(e) => setEditFormData({ user_type: e.target.value })}
-                        style={{ padding: "5px", border: "1px solid #ccc", borderRadius: "4px" }}
+                        value={currentEditData.user_type}
+                        onChange={(e) => setEditFormDataMap({
+                          ...editFormDataMap,
+                          [u.id!]: { user_type: e.target.value }
+                        })}
+                        className="p-1.5 border border-gray-300 rounded"
                       >
                         <option value="normal">Normal (R)</option>
                         <option value="teacher">Teacher (S)</option>
@@ -340,34 +357,34 @@ export default function AdminPanel() {
                       getUserTypeLabel(u.user_type)
                     )}
                   </td>
-                  <td style={{ padding: "12px", border: "1px solid #ddd" }}>
+                  <td className="p-3 border border-gray-300">
                     {isEditingThisUser ? (
-                      <div style={{ display: "flex", gap: "5px" }}>
+                      <div className="flex gap-1.5">
                         <button
-                          onClick={() => u.id && handleUpdateUser(u.id)}
-                          style={{ padding: "5px 10px", backgroundColor: "#4CAF50", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "12px" }}
+                          onClick={() => handleUpdateUser(u.id!)}
+                          className="px-2.5 py-1.5 bg-green-500 text-white border-none rounded cursor-pointer text-xs hover:bg-green-600 transition-colors"
                         >
                           Saglabāt
                         </button>
                         <button
                           onClick={handleCancelEdit}
-                          style={{ padding: "5px 10px", backgroundColor: "#f44336", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "12px" }}
+                          className="px-2.5 py-1.5 bg-red-500 text-white border-none rounded cursor-pointer text-xs hover:bg-red-600 transition-colors"
                         >
                           Atcelt
                         </button>
                       </div>
                     ) : (
-                      <div style={{ display: "flex", gap: "5px" }}>
+                      <div className="flex gap-1.5">
                         <button
                           onClick={() => handleEditClick(u)}
-                          style={{ padding: "5px 10px", backgroundColor: "#2196F3", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "12px" }}
+                          className="px-2.5 py-1.5 bg-blue-500 text-white border-none rounded cursor-pointer text-xs hover:bg-blue-600 transition-colors"
                         >
                           Rediģēt
                         </button>
                         {u.id !== user?.id && (
                           <button
-                            onClick={() => u.id && handleDeleteUser(u.id, u.email)}
-                            style={{ padding: "5px 10px", backgroundColor: "#f44336", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "12px" }}
+                            onClick={() => handleDeleteUser(u.id!, u.email)}
+                            className="px-2.5 py-1.5 bg-red-500 text-white border-none rounded cursor-pointer text-xs hover:bg-red-600 transition-colors"
                           >
                             Dzēst
                           </button>
@@ -380,7 +397,7 @@ export default function AdminPanel() {
             </tbody>
           </table>
           {users.length === 0 && !loading && (
-            <div style={{ textAlign: "center", padding: "20px", color: "#666" }}>
+            <div className="text-center p-5 text-gray-600">
               Nav atrasti lietotāji
             </div>
           )}
@@ -389,4 +406,3 @@ export default function AdminPanel() {
     </div>
   );
 }
-

@@ -6,7 +6,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from django.db.models import Q
 from .serializers import (
     RegisterSerializer, UserSerializer, CustomTokenObtainPairSerializer, 
-    ProfileUpdateSerializer, AdminUserSerializer
+    ProfileUpdateSerializer, AdminUserSerializer, PasswordChangeSerializer
 )
 from .models import User
 
@@ -38,7 +38,6 @@ class ProfileUpdateView(generics.UpdateAPIView):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         
-        # If user is not admin, remove user_type from request data
         if instance.user_type != 'admin' and 'user_type' in request.data:
             data = request.data.copy()
             data.pop('user_type', None)
@@ -49,7 +48,6 @@ class ProfileUpdateView(generics.UpdateAPIView):
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         
-        # Refresh instance to get updated data
         instance.refresh_from_db()
         return Response(UserSerializer(instance).data)
 
@@ -97,20 +95,17 @@ class AdminUserUpdateView(generics.UpdateAPIView):
         return context
     
     def partial_update(self, request, *args, **kwargs):
-        # Allow partial updates for user_type changes
         kwargs['partial'] = True
         return self.update(request, *args, **kwargs)
     
     def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', True)  # Always use partial for admin updates
+        partial = kwargs.pop('partial', True)
         instance = self.get_object()
         
-        # Only update the specific instance
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         updated_instance = serializer.save()
         
-        # Refresh instance to get updated data
         updated_instance.refresh_from_db()
         
         return Response(UserSerializer(updated_instance).data)
@@ -123,7 +118,6 @@ class AdminUserDeleteView(generics.DestroyAPIView):
     
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        # Don't allow deleting yourself
         if instance.id == request.user.id:
             return Response(
                 {"detail": "Jūs nevarat dzēst savu profilu"},
@@ -131,3 +125,18 @@ class AdminUserDeleteView(generics.DestroyAPIView):
             )
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PasswordChangeView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = PasswordChangeSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        
+        user = request.user
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+        
+        return Response({"detail": "Parole veiksmīgi nomainīta"}, status=status.HTTP_200_OK)

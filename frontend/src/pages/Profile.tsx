@@ -6,7 +6,7 @@ import { messages } from "../messages";
 export default function Profile() {
   const { user, logout, updateProfile, changePassword } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState<"info" | "applications" | "password">("info");
+  const [activeSection, setActiveSection] = useState<"info" | "applications" | "password" | "teacherPanel" | "adminPanel">("info");
   const [formData, setFormData] = useState({
     name: "",
     last_name: "",
@@ -39,6 +39,7 @@ export default function Profile() {
   if (!user) return <div className="p-5 mt-20 text-white">Loading...</div>;
 
   const isAdmin = user.user_type === "admin";
+  const isTeacher = user.user_type === "teacher";
 
   async function handleSave() {
     setError("");
@@ -57,9 +58,9 @@ export default function Profile() {
         number: formData.number
       };
       
-      if (isAdmin) {
-        updateData.user_type = formData.user_type;
-      }
+      // Admins cannot change their own user type
+      // Only allow user_type update if it's not the current user
+      // (This is for the profile page, so we never allow self-modification of user_type)
       
       await updateProfile(updateData);
       setSuccess(messages.S002("Profils"));
@@ -116,10 +117,12 @@ export default function Profile() {
         <div className="flex gap-8">
           <div className="w-64 flex-shrink-0">
             <div className="mb-6 flex justify-center">
-              <div className="w-32 h-32 rounded-full bg-[#252D47] border-2 border-[#3A4562] flex items-center justify-center">
-                <svg className="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                </svg>
+              <div className="w-40 h-40 rounded-full bg-[#252D47] border-2 border-[#3A4562] flex items-center justify-center overflow-hidden">
+                <img
+                  src={require("../static/user2.png")}
+                  alt="User"
+                  className="w-full h-full object-cover"
+                />
               </div>
             </div>
 
@@ -166,6 +169,39 @@ export default function Profile() {
                 Mainīt paroli
               </button>
 
+              {isTeacher && (
+                <button
+                  onClick={() => setActiveSection(activeSection === "teacherPanel" ? "info" : "teacherPanel")}
+                  className={`w-full px-4 py-3 rounded-lg text-left font-medium transition-colors flex items-center gap-3 ${
+                    activeSection === "teacherPanel"
+                      ? "bg-brand-gold text-black"
+                      : "bg-[#252D47] text-gray-300 hover:bg-[#2A3454]"
+                  }`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  </svg>
+                  Skolotāju panelis
+                </button>
+              )}
+
+              {isAdmin && (
+                <button
+                  onClick={() => setActiveSection(activeSection === "adminPanel" ? "info" : "adminPanel")}
+                  className={`w-full px-4 py-3 rounded-lg text-left font-medium transition-colors flex items-center gap-3 ${
+                    activeSection === "adminPanel"
+                      ? "bg-brand-gold text-black"
+                      : "bg-[#252D47] text-gray-300 hover:bg-[#2A3454]"
+                  }`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Administratora panelis
+                </button>
+              )}
+
               <button
                 onClick={handleLogout}
                 className="w-full px-4 py-3 rounded-lg text-left font-medium transition-colors flex items-center gap-3 bg-[#252D47] text-gray-300 hover:bg-[#2A3454]"
@@ -176,17 +212,6 @@ export default function Profile() {
                 Iziet
               </button>
             </div>
-
-            {isAdmin && (
-              <div className="mt-6">
-                <button
-                  onClick={() => navigate("/admin")}
-                  className="w-full px-4 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
-                >
-                  Admin Panel
-                </button>
-              </div>
-            )}
           </div>
 
           <div className="flex-1 bg-[#252D47] rounded-lg p-8">
@@ -267,12 +292,14 @@ export default function Profile() {
                       <select
                         value={formData.user_type}
                         onChange={(e) => setFormData({ ...formData, user_type: e.target.value })}
-                        className="w-full p-3 rounded-lg bg-[#1B2241] border border-[#3A4562] text-white focus:outline-none focus:border-brand-gold"
+                        disabled={true}
+                        className="w-full p-3 rounded-lg bg-[#1B2241] border border-[#3A4562] text-gray-400 cursor-not-allowed focus:outline-none"
                       >
                         <option value="normal">Normal (R)</option>
                         <option value="teacher">Teacher (S)</option>
                         <option value="admin">Admin (A)</option>
                       </select>
+                      <p className="text-gray-400 text-sm mt-2">Jūs nevarat mainīt savu lietotāja tipu</p>
                     </div>
                   )}
 
@@ -413,6 +440,188 @@ export default function Profile() {
                     </button>
                   </div>
                 </form>
+              </div>
+            )}
+
+            {activeSection === "teacherPanel" && (
+              <div>
+                <h2 className="text-3xl font-bold text-white mb-8">Skolotāju panelis</h2>
+                <div className="grid grid-cols-2 gap-6">
+                  <button
+                    onClick={() => navigate("/admin")}
+                    className="bg-[#3A4562] hover:bg-[#4A5568] text-white p-6 rounded-lg transition-colors flex flex-col items-center gap-3"
+                  >
+                    <img
+                      src={require("../static/User Multiple Group.png")}
+                      alt="Kontu saraksts"
+                      className="w-8 h-8"
+                    />
+                    <span className="font-semibold">Kontu saraksts</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate("/admin/schools")}
+                    className="bg-[#3A4562] hover:bg-[#4A5568] text-white p-6 rounded-lg transition-colors flex flex-col items-center gap-3"
+                  >
+                    <img
+                      src={require("../static/Bullet List.png")}
+                      alt="Skolas saraksts"
+                      className="w-8 h-8"
+                    />
+                    <span className="font-semibold">Skolas saraksts</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate("/admin/create-account")}
+                    className="bg-[#3A4562] hover:bg-[#4A5568] text-white p-6 rounded-lg transition-colors flex flex-col items-center gap-3"
+                  >
+                    <img
+                      src={require("../static/User Add Plus.png")}
+                      alt="Jauns konts"
+                      className="w-8 h-8"
+                    />
+                    <span className="font-semibold">Jauns konts</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate("/admin/manage-school-users")}
+                    className="bg-[#3A4562] hover:bg-[#4A5568] text-white p-6 rounded-lg transition-colors flex flex-col items-center gap-3"
+                  >
+                    <img
+                      src={require("../static/User Add Plus.png")}
+                      alt="Pievienot lietotāju skolai"
+                      className="w-8 h-8"
+                    />
+                    <span className="font-semibold">Pievienot lietotāju skolai</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate("/admin/school-applications")}
+                    className="bg-[#3A4562] hover:bg-[#4A5568] text-white p-6 rounded-lg transition-colors flex flex-col items-center gap-3"
+                  >
+                    <img
+                      src={require("../static/Bullet List.png")}
+                      alt="Skolas Pieteikumi"
+                      className="w-8 h-8"
+                    />
+                    <span className="font-semibold">Skolas Pieteikumi</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate("/admin/manage-school-users", { state: { action: "remove" } })}
+                    className="bg-[#3A4562] hover:bg-[#4A5568] text-white p-6 rounded-lg transition-colors flex flex-col items-center gap-3"
+                  >
+                    <img
+                      src={require("../static/User minus.png")}
+                      alt="Noņemt lietotāju skolai"
+                      className="w-8 h-8"
+                    />
+                    <span className="font-semibold">Noņemt lietotāju skolai</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeSection === "adminPanel" && (
+              <div>
+                <h2 className="text-3xl font-bold text-white mb-8">Administratora panelis</h2>
+                <div className="grid grid-cols-2 gap-6">
+                  <button
+                    onClick={() => navigate("/admin")}
+                    className="bg-[#3A4562] hover:bg-[#4A5568] text-white p-6 rounded-lg transition-colors flex flex-col items-center gap-3"
+                  >
+                    <img
+                      src={require("../static/User Multiple Group.png")}
+                      alt="Kontu saraksts"
+                      className="w-8 h-8"
+                    />
+                    <span className="font-semibold">Kontu saraksts</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate("/admin/schools")}
+                    className="bg-[#3A4562] hover:bg-[#4A5568] text-white p-6 rounded-lg transition-colors flex flex-col items-center gap-3"
+                  >
+                    <img
+                      src={require("../static/Bullet List.png")}
+                      alt="Skolas saraksts"
+                      className="w-8 h-8"
+                    />
+                    <span className="font-semibold">Skolas saraksts</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate("/admin/create-account")}
+                    className="bg-[#3A4562] hover:bg-[#4A5568] text-white p-6 rounded-lg transition-colors flex flex-col items-center gap-3"
+                  >
+                    <img
+                      src={require("../static/User Add Plus.png")}
+                      alt="Jauns konts"
+                      className="w-8 h-8"
+                    />
+                    <span className="font-semibold">Jauns konts</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate("/admin/manage-school-users")}
+                    className="bg-[#3A4562] hover:bg-[#4A5568] text-white p-6 rounded-lg transition-colors flex flex-col items-center gap-3"
+                  >
+                    <img
+                      src={require("../static/User Add Plus.png")}
+                      alt="Pievienot lietotāju skolai"
+                      className="w-8 h-8"
+                    />
+                    <span className="font-semibold">Pievienot lietotāju skolai</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate("/admin/school-applications")}
+                    className="bg-[#3A4562] hover:bg-[#4A5568] text-white p-6 rounded-lg transition-colors flex flex-col items-center gap-3"
+                  >
+                    <img
+                      src={require("../static/Bullet List.png")}
+                      alt="Skolas Pieteikumi"
+                      className="w-8 h-8"
+                    />
+                    <span className="font-semibold">Skolas Pieteikumi</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate("/admin/manage-school-users", { state: { action: "remove" } })}
+                    className="bg-[#3A4562] hover:bg-[#4A5568] text-white p-6 rounded-lg transition-colors flex flex-col items-center gap-3"
+                  >
+                    <img
+                      src={require("../static/User minus.png")}
+                      alt="Noņemt lietotāju skolai"
+                      className="w-8 h-8"
+                    />
+                    <span className="font-semibold">Noņemt lietotāju skolai</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate("/admin/create-olympiad")}
+                    className="bg-[#3A4562] hover:bg-[#4A5568] text-white p-6 rounded-lg transition-colors flex flex-col items-center gap-3"
+                  >
+                    <img
+                      src={require("../static/Add Circle.png")}
+                      alt="Jauna olimpiāde"
+                      className="w-8 h-8"
+                    />
+                    <span className="font-semibold">Jauna olimpiāde</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate("/admin/olympiads")}
+                    className="bg-[#3A4562] hover:bg-[#4A5568] text-white p-6 rounded-lg transition-colors flex flex-col items-center gap-3"
+                  >
+                    <img
+                      src={require("../static/Bullet List.png")}
+                      alt="Olimpiādes saraksts"
+                      className="w-8 h-8"
+                    />
+                    <span className="font-semibold">Olimpiādes saraksts</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>

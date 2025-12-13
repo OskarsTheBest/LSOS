@@ -10,6 +10,8 @@ export interface User {
   user_type?: string;
   is_active?: boolean;
   create_date?: string;
+  skola?: number;
+  skola_nosaukums?: string;
 }
 
 type ProfileUpdatePayload = Partial<Pick<User, "name" | "last_name" | "number" | "user_type">>;
@@ -21,6 +23,7 @@ type AdminUserCreatePayload = {
   last_name?: string;
   number?: string;
   user_type?: string;
+  skola?: number | null;
 };
 
 type AdminUserUpdatePayload = {

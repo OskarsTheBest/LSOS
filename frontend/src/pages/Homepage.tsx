@@ -31,12 +31,6 @@ export default function Homepage() {
 
         <div className="flex gap-4 justify-start">
           <button
-            onClick={() => navigate("/olympiads")}
-            className="px-8 py-3 bg-white border-2 border-white text-black rounded-lg font-semibold text-base transition-colors hover:bg-white/10"
-          >
-            Uzzini vairāk
-          </button>
-          <button
             onClick={() => navigate("/register")}
             className="px-8 py-3 bg-brand-gold text-black rounded-lg font-semibold text-base transition-colors hover:bg-brand-gold-dark"
           >

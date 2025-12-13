@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import User
+from .models import User, Skola, Olimpiade, Prieksmets, Pieteikums, Rezultats
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -20,9 +20,12 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    skola = serializers.PrimaryKeyRelatedField(read_only=True)
+    skola_nosaukums = serializers.CharField(source='skola.nosaukums', read_only=True)
+    
     class Meta:
         model = User
-        fields = ['id', 'email', 'name', 'last_name', 'number', 'user_type']
+        fields = ['id', 'email', 'name', 'last_name', 'number', 'user_type', 'skola', 'skola_nosaukums', 'create_date']
 
 
 class ProfileUpdateSerializer(serializers.ModelSerializer):
@@ -51,11 +54,13 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
 
 class AdminUserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
+    skola = serializers.PrimaryKeyRelatedField(queryset=Skola.objects.all(), required=False, allow_null=True)
+    skola_nosaukums = serializers.CharField(source='skola.nosaukums', read_only=True)
     
     class Meta:
         model = User
-        fields = ['id', 'email', 'password', 'name', 'last_name', 'number', 'user_type', 'is_active', 'create_date']
-        read_only_fields = ['id', 'create_date']
+        fields = ['id', 'email', 'password', 'name', 'last_name', 'number', 'user_type', 'is_active', 'create_date', 'skola', 'skola_nosaukums']
+        read_only_fields = ['id', 'create_date', 'skola_nosaukums']
         extra_kwargs = {
             'email': {'required': False},
             'name': {'required': False},
@@ -84,6 +89,12 @@ class AdminUserSerializer(serializers.ModelSerializer):
         if value not in ['normal', 'teacher', 'admin']:
             raise serializers.ValidationError("Nepareizs lietotāja tips")
         return value
+    
+    def validate(self, attrs):
+        # Require school for teachers
+        if attrs.get('user_type') == 'teacher' and not attrs.get('skola'):
+            raise serializers.ValidationError({"skola": "Skolotājiem jābūt pievienotiem skolai"})
+        return attrs
     
     def create(self, validated_data):
         password = validated_data.pop('password', None)
@@ -123,4 +134,66 @@ class PasswordChangeSerializer(serializers.Serializer):
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     username_field = 'email'
+
+
+class SkolaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Skola
+        fields = ['id', 'nosaukums', 'pasvaldiba', 'adrese']
+        read_only_fields = ['id']
+
+
+class PrieksmetsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Prieksmets
+        fields = ['id', 'nosaukums', 'kategorija']
+        read_only_fields = ['id']
+
+
+class OlimpiadeSerializer(serializers.ModelSerializer):
+    prieksmets_nosaukums = serializers.CharField(source='prieksmets.nosaukums', read_only=True)
+    prieksmets_kategorija = serializers.CharField(source='prieksmets.kategorija', read_only=True)
+    
+    class Meta:
+        model = Olimpiade
+        fields = ['id', 'nosaukums', 'datums', 'maxDalibnieki', 'apraksts', 'norisesVieta', 
+                  'organizetajs', 'prieksmets', 'prieksmets_nosaukums', 'prieksmets_kategorija']
+        read_only_fields = ['id', 'prieksmets_nosaukums', 'prieksmets_kategorija']
+
+
+class PieteikumsSerializer(serializers.ModelSerializer):
+    lietotajs_email = serializers.CharField(source='lietotajs.email', read_only=True)
+    lietotajs_name = serializers.CharField(source='lietotajs.name', read_only=True)
+    lietotajs_last_name = serializers.CharField(source='lietotajs.last_name', read_only=True)
+    lietotajs_skola = serializers.CharField(source='lietotajs.skola.nosaukums', read_only=True)
+    olimpiade_nosaukums = serializers.CharField(source='olimpiade.nosaukums', read_only=True)
+    olimpiade_datums = serializers.DateField(source='olimpiade.datums', read_only=True)
+    
+    class Meta:
+        model = Pieteikums
+        fields = ['id', 'statuss', 'pieteikumaDatums', 'lietotajs', 'olimpiade',
+                  'lietotajs_email', 'lietotajs_name', 'lietotajs_last_name', 'lietotajs_skola',
+                  'olimpiade_nosaukums', 'olimpiade_datums']
+        read_only_fields = ['id', 'pieteikumaDatums', 'lietotajs_email', 'lietotajs_name', 
+                           'lietotajs_last_name', 'lietotajs_skola', 'olimpiade_nosaukums', 'olimpiade_datums']
+
+
+class RezultatsSerializer(serializers.ModelSerializer):
+    lietotajs_name = serializers.SerializerMethodField()
+    lietotajs_email = serializers.CharField(source='lietotajs.email', read_only=True)
+    olimpiade_nosaukums = serializers.CharField(source='olimpiade.nosaukums', read_only=True)
+    
+    class Meta:
+        model = Rezultats
+        fields = ['id', 'olimpiade', 'punktuSkaits', 'vieta', 'rezultataDatums', 'lietotajs',
+                  'lietotajs_name', 'lietotajs_email', 'olimpiade_nosaukums']
+        read_only_fields = ['id', 'olimpiade_nosaukums', 'lietotajs_name', 'lietotajs_email']
+    
+    def get_lietotajs_name(self, obj):
+        if obj.lietotajs:
+            name = obj.lietotajs.name or ""
+            last_name = obj.lietotajs.last_name or ""
+            full_name = f"{name} {last_name}".strip()
+            return full_name if full_name else obj.lietotajs.email
+        return "Nav norādīts"
         

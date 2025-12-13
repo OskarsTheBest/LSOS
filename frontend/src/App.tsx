@@ -4,7 +4,14 @@ import Homepage from "./pages/Homepage";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import AdminPanel from "./pages/AdminPanel";
+import CreateAccount from "./pages/CreateAccount";
+import SchoolsList from "./pages/SchoolsList";
+import SchoolUsers from "./pages/SchoolUsers";
+import ManageSchoolUsers from "./pages/ManageSchoolUsers";
 import Olympiads from "./pages/Olympiads";
+import OlympiadsList from "./pages/OlympiadsList";
+import CreateOlympiad from "./pages/CreateOlympiad";
+import SchoolApplications from "./pages/SchoolApplications";
 import Results from "./pages/Results";
 import PrivateRoute from "./components/PrivateRoute";
 import AdminRoute from "./components/AdminRoute";
@@ -30,27 +37,69 @@ function App() {
           <Route
             path="/admin"
             element={
-              <AdminRoute>
+              <PrivateRoute>
                 <AdminPanel />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/create-account"
+            element={
+              <AdminRoute>
+                <CreateAccount />
               </AdminRoute>
             }
           />
           <Route
-            path="/olympiads"
+            path="/admin/schools"
             element={
               <PrivateRoute>
-                <Olympiads />
+                <SchoolsList />
               </PrivateRoute>
             }
           />
           <Route
-            path="/results"
+            path="/admin/schools/:schoolId/users"
             element={
               <PrivateRoute>
-                <Results />
+                <SchoolUsers />
               </PrivateRoute>
             }
           />
+          <Route
+            path="/admin/manage-school-users"
+            element={
+              <PrivateRoute>
+                <ManageSchoolUsers />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/olympiads"
+            element={
+              <AdminRoute>
+                <OlympiadsList />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/create-olympiad"
+            element={
+              <AdminRoute>
+                <CreateOlympiad />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/school-applications"
+            element={
+              <PrivateRoute>
+                <SchoolApplications />
+              </PrivateRoute>
+            }
+          />
+          <Route path="/olympiads" element={<Olympiads />} />
+          <Route path="/results" element={<Results />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

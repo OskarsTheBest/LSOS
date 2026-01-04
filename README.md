@@ -209,15 +209,3 @@ rm db.sqlite3
 python manage.py migrate
 python create_sample_data.py
 ```
-
----
-
-## License
-
-This project is for educational / internal use. Add a license if needed.
-
----
-
-## Author
-
-LSOS Project Team

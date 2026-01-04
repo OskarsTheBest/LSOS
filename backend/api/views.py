@@ -403,6 +403,63 @@ class SchoolApplicationsListView(generics.ListAPIView):
             return Pieteikums.objects.none()
 
 
+class CreateApplicationView(generics.GenericAPIView):
+    """Create application for an olympiad - Authenticated users"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request, *args, **kwargs):
+        olympiad_id = request.data.get('olympiad_id')
+        
+        if not olympiad_id:
+            return Response(
+                {"detail": "Olimpiādes ID ir obligāts"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            olympiad = Olimpiade.objects.get(id=olympiad_id)
+        except Olimpiade.DoesNotExist:
+            return Response(
+                {"detail": "Olimpiāde nav atrasta"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        existing_application = Pieteikums.objects.filter(
+            lietotajs=request.user,
+            olimpiade=olympiad
+        ).first()
+        
+        if existing_application:
+            return Response(
+                {"detail": "Jūs jau esat reģistrējušies šai olimpiādei"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+
+        application = Pieteikums.objects.create(
+            lietotajs=request.user,
+            olimpiade=olympiad,
+            statuss="Reģistrēts"
+        )
+        
+        serializer = PieteikumsSerializer(application)
+        return Response(
+            {"detail": "Pieteikums veiksmīgi izveidots", "application": serializer.data},
+            status=status.HTTP_201_CREATED
+        )
+
+
+class UserApplicationsListView(generics.ListAPIView):
+    """Get all applications for the current logged in user"""
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = PieteikumsSerializer
+    
+    def get_queryset(self):
+        return Pieteikums.objects.filter(
+            lietotajs=self.request.user
+        ).order_by('-pieteikumaDatums')
+
+
 class UpdateApplicationStatusView(generics.GenericAPIView):
     """FORM_005: Approve application - Teachers and Admins"""
     permission_classes = [permissions.IsAuthenticated, IsTeacherOrAdmin]
@@ -448,7 +505,7 @@ class OlympiadResultsListView(generics.ListAPIView):
     serializer_class = RezultatsSerializer
     
     def get_queryset(self):
-        olympiad_id = self.request.query_params.get('olympiad_id', None)
+        olympiad_id = self.kwargs.get('pk')
         if not olympiad_id:
             return Rezultats.objects.none()
         

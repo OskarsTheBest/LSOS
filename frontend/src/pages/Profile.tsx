@@ -2,6 +2,8 @@ import React, { useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../AuthContext";
 import { messages } from "../messages";
+import { validatePassword } from "../utils/passwordValidation";
+import api from "../axios";
 
 export default function Profile() {
   const { user, logout, updateProfile, changePassword } = useContext(AuthContext);
@@ -16,7 +18,8 @@ export default function Profile() {
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [applications] = useState<any[]>([]);
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loadingApplications, setLoadingApplications] = useState(false);
   
   const [passwordData, setPasswordData] = useState({
     oldPassword: "",
@@ -35,6 +38,47 @@ export default function Profile() {
       });
     }
   }, [user]);
+
+  useEffect(() => {
+    if (activeSection === "applications" && user) {
+      loadApplications();
+    }
+  }, [activeSection, user]);
+
+  const loadApplications = async () => {
+    setLoadingApplications(true);
+    try {
+      const res = await api.get("/api/applications/");
+      const formattedApplications = res.data.map((app: any) => {
+        const olympiadDate = app.olimpiade_datums ? new Date(app.olimpiade_datums) : null;
+        const today = new Date();
+        const hasResult = app.statuss === "Beidzies" && olympiadDate && olympiadDate < today;
+        const hasViewLink = app.statuss === "Reģistrēts" || app.statuss === "Apstrādē";
+        
+        let applicationDateStr = "";
+        if (app.pieteikumaDatums) {
+          const appDate = new Date(app.pieteikumaDatums);
+          applicationDateStr = appDate.toLocaleDateString("lv-LV", { day: "2-digit", month: "2-digit", year: "numeric" });
+        }
+        
+        return {
+          id: app.id,
+          olympiadName: app.olimpiade_nosaukums || "-",
+          applicationDate: applicationDateStr,
+          status: app.statuss || "-",
+          hasResult,
+          hasViewLink,
+          olympiadId: app.olimpiade
+        };
+      });
+      setApplications(formattedApplications);
+    } catch (err: any) {
+      console.error("Failed to load applications:", err);
+      setApplications([]);
+    } finally {
+      setLoadingApplications(false);
+    }
+  };
 
   if (!user) return <div className="p-5 mt-20 text-white">Loading...</div>;
 
@@ -84,8 +128,9 @@ export default function Profile() {
       return;
     }
 
-    if (passwordData.newPassword.length < 8) {
-      setError("Parolei jābūt vismaz 8 simbolu garai");
+    const passwordValidation = validatePassword(passwordData.newPassword);
+    if (!passwordValidation.isValid) {
+      setError(passwordValidation.error || "Nepareiza parole");
       return;
     }
 
@@ -318,7 +363,9 @@ export default function Profile() {
             {activeSection === "applications" && (
               <div>
                 <h2 className="text-3xl font-bold text-white mb-8">Konta iestatījumi</h2>
-                {applications.length === 0 ? (
+                {loadingApplications ? (
+                  <div className="text-center text-white text-xl py-12">Ielādē...</div>
+                ) : applications.length === 0 ? (
                   <div className="border border-[#8E8E93] rounded-lg p-12 min-h-[400px] flex items-start justify-center pt-16">
                     <div className="text-center">
                       <div className="text-white text-xl font-bold">Te vēl nav</div>

@@ -35,10 +35,11 @@ type AdminUserUpdatePayload = {
 
 interface AuthContextType {
   user: User | null;
+  loading: boolean;
   login(email: string, password: string): Promise<void>;
   register(email: string, password: string, name?: string, last_name?: string, number?: string): Promise<void>;
   logout(): void;
-  getProfile(): Promise<void>;
+  getProfile(): Promise<boolean>;
   updateProfile(data: ProfileUpdatePayload): Promise<void>;
   changePassword(oldPassword: string, newPassword: string, confirmPassword: string): Promise<void>;
   searchUsers(search?: string): Promise<User[]>;
@@ -51,6 +52,7 @@ export const AuthContext = createContext<AuthContextType>(null as any);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   async function login(email: string, password: string) {
     const res = await api.post("/api/token/", { email, password });
@@ -68,8 +70,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const res = await api.get("/api/profile/");
       setUser(res.data);
-    } catch (e) {
-      setUser(null);
+      return true;
+    } catch (e: any) {
+      // Only clear user if token is actually invalid (401 or 403)
+      // Don't clear on network errors or other issues
+      if (e.response?.status === 401 || e.response?.status === 403) {
+        localStorage.clear();
+        setUser(null);
+      }
+      return false;
     }
   }
 
@@ -93,6 +102,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   function logout() {
     localStorage.clear();
     setUser(null);
+    setLoading(false);
   }
 
   async function searchUsers(search?: string): Promise<User[]> {
@@ -116,14 +126,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   useEffect(() => {
-    if (localStorage.getItem("access")) {
-      getProfile();
-    }
+    const initAuth = async () => {
+      const access = localStorage.getItem("access");
+      if (access) {
+        await getProfile();
+      }
+      setLoading(false);
+    };
+    initAuth();
   }, []);
 
   return (
     <AuthContext.Provider value={{ 
-      user, login, register, logout, getProfile, updateProfile, changePassword,
+      user, loading, login, register, logout, getProfile, updateProfile, changePassword,
       searchUsers, createUser, updateUser, deleteUser
     }}>
       {children}

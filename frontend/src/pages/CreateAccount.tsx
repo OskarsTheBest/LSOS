@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../AuthContext";
 import { messages } from "../messages";
 import api from "../axios";
+import { validatePassword } from "../utils/passwordValidation";
 
 export default function CreateAccount() {
   const { createUser } = useContext(AuthContext);
@@ -45,6 +46,12 @@ export default function CreateAccount() {
     }
     if (!formData.password) {
       setError(messages.E001("Parole"));
+      return;
+    }
+
+    const passwordValidation = validatePassword(formData.password);
+    if (!passwordValidation.isValid) {
+      setError(passwordValidation.error || "Nepareiza parole");
       return;
     }
 
@@ -123,7 +130,7 @@ export default function CreateAccount() {
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
                   className="w-full p-3 rounded-lg bg-[#1B2241] border border-[#3A4562] text-white placeholder-gray-400 focus:outline-none focus:border-brand-gold"
-                  placeholder="Minimāli 8 simboli"
+                  placeholder="Min. 8 simboli, 1 lielais burts, 1 speciālais simbols"
                 />
               </div>
               

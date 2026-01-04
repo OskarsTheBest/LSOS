@@ -12,6 +12,16 @@ class LoggingAPIClient(APIClient):
     mainly visible when a test fails or errors.
     """
 
+    def _safe_print(self, message):
+        """Safely print message, handling Unicode encoding errors"""
+        try:
+            print(message)
+        except UnicodeEncodeError:
+            try:
+                print(message.encode('utf-8', errors='replace').decode('utf-8', errors='replace'))
+            except:
+                print("[Unable to display message due to encoding issues]")
+
     def request(self, **kwargs):
         current_test = getattr(self, "_current_test", None)
         prefix = f"[{current_test}]" if current_test else "[TEST]"
@@ -21,41 +31,44 @@ class LoggingAPIClient(APIClient):
         if query_string:
             path = f"{path}?{query_string}"
         
-
-        print(f"\n{prefix} ===== REQUEST =====")
-        print(f"{prefix} Method: {method}")
-        print(f"{prefix} Path: {path}")
+        self._safe_print(f"\n{prefix} ===== REQUEST =====")
+        self._safe_print(f"{prefix} Method: {method}")
+        self._safe_print(f"{prefix} Path: {path}")
         
-
         data = kwargs.get("data")
         if data:
-            print(f"{prefix} Request Data: {data}")
+            try:
+                self._safe_print(f"{prefix} Request Data: {data}")
+            except:
+                self._safe_print(f"{prefix} Request Data: [Unable to display]")
         
-
         content_type = kwargs.get("CONTENT_TYPE", kwargs.get("content_type"))
         if content_type:
-            print(f"{prefix} Content-Type: {content_type}")
+            self._safe_print(f"{prefix} Content-Type: {content_type}")
         
-
         response = super().request(**kwargs)
         
-
-        print(f"{prefix} ===== RESPONSE =====")
-        print(f"{prefix} Status Code: {response.status_code}")
+        self._safe_print(f"{prefix} ===== RESPONSE =====")
+        self._safe_print(f"{prefix} Status Code: {response.status_code}")
         
         response_data = getattr(response, "data", None)
         if response_data is not None:
-            print(f"{prefix} Response Data: {response_data}")
+            try:
+                import json
+                data_str = json.dumps(response_data, ensure_ascii=False, default=str)
+                self._safe_print(f"{prefix} Response Data: {data_str}")
+            except:
+                self._safe_print(f"{prefix} Response Data: [Unable to display]")
         else:
             try:
                 if hasattr(response, "content"):
-                    content = response.content.decode("utf-8")[:500] 
+                    content = response.content.decode("utf-8", errors='replace')[:500] 
                     if content:
-                        print(f"{prefix} Response Content: {content}")
+                        self._safe_print(f"{prefix} Response Content: {content}")
             except:
                 pass
         
-        print(f"{prefix} ====================\n")
+        self._safe_print(f"{prefix} ====================\n")
         return response
 
 
@@ -135,10 +148,17 @@ class GeneralTests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_GT2_empty_form_validation(self):
+        """GT-2: Test empty form validation for all create endpoints"""
         self.authenticate_as(self.admin_user)
         response = self.client.post("/api/admin/users/create/", {}, format="json")
         self.assertIn(response.status_code, [status.HTTP_400_BAD_REQUEST, status.HTTP_422_UNPROCESSABLE_ENTITY])
         response = self.client.post("/api/schools/create/", {}, format="json")
+        self.assertIn(response.status_code, [status.HTTP_400_BAD_REQUEST, status.HTTP_422_UNPROCESSABLE_ENTITY])
+        response = self.client.post("/api/olympiads/create/", {}, format="json")
+        self.assertIn(response.status_code, [status.HTTP_400_BAD_REQUEST, status.HTTP_422_UNPROCESSABLE_ENTITY])
+        response = self.client.post("/api/applications/create/", {}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.post("/api/results/import/", {}, format="json")
         self.assertIn(response.status_code, [status.HTTP_400_BAD_REQUEST, status.HTTP_422_UNPROCESSABLE_ENTITY])
 
     def test_GT3_delete_confirmation_accepted(self):
@@ -158,9 +178,10 @@ class GeneralTests(BaseAPITestCase):
 
 class UserRegistrationTests(BaseAPITestCase):
     def test_T1_register_success(self):
+        """USER_001: Register with valid data"""
         data = {
             "email": "janis.berzins@gmail.com",
-            "password": "Parole123",
+            "password": "Parole123!", 
             "name": "Jānis",
             "last_name": "Bērziņš",
             "number": "+37120290000",
@@ -168,8 +189,8 @@ class UserRegistrationTests(BaseAPITestCase):
         response = self.client.post("/api/register/", data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         user = User.objects.get(email="janis.berzins@gmail.com")
-        self.assertNotEqual(user.password, "Parole123")
-        self.assertTrue(user.check_password("Parole123"))
+        self.assertNotEqual(user.password, "Parole123!")
+        self.assertTrue(user.check_password("Parole123!"))
 
     def test_T2_register_invalid_format(self):
         data = {
@@ -183,9 +204,10 @@ class UserRegistrationTests(BaseAPITestCase):
         self.assertIn(response.status_code, [status.HTTP_400_BAD_REQUEST, status.HTTP_422_UNPROCESSABLE_ENTITY])
 
     def test_T3_register_duplicate_email(self):
+        """USER_001: Try to register with existing email"""
         data = {
             "email": self.normal_user.email,
-            "password": "Parole123",
+            "password": "Parole123!",
             "name": "Jānis",
             "last_name": "Bērziņš",
             "number": "+37120290001",
@@ -194,9 +216,10 @@ class UserRegistrationTests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_T4_register_password_mismatch(self):
+        """USER_001: Register successfully (password mismatch test removed as serializer doesn't require password_confirm)"""
         data = {
             "email": "test@example.com",
-            "password": "Parole123",
+            "password": "Parole123!",
             "name": "Test",
             "last_name": "User",
             "number": "+37120290000",
@@ -205,17 +228,40 @@ class UserRegistrationTests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_T5_register_password_too_short(self):
+        """USER_001: Test password validation - too short"""
         data = {
             "email": "test@example.com",
-            "password": "Parole",
+            "password": "Parole",  
             "name": "Test",
             "last_name": "User",
             "number": "+37120290000",
         }
         response = self.client.post("/api/register/", data, format="json")
-        if response.status_code == status.HTTP_201_CREATED:
-            user = User.objects.get(email="test@example.com")
-            self.assertTrue(len(user.password) > 0)
+        self.assertIn(response.status_code, [status.HTTP_400_BAD_REQUEST, status.HTTP_422_UNPROCESSABLE_ENTITY])
+    
+    def test_register_password_no_capital(self):
+        """USER_001: Test password validation - no capital letter"""
+        data = {
+            "email": "test2@example.com",
+            "password": "parole123!",  
+            "name": "Test",
+            "last_name": "User",
+            "number": "+37120290000",
+        }
+        response = self.client.post("/api/register/", data, format="json")
+        self.assertIn(response.status_code, [status.HTTP_400_BAD_REQUEST, status.HTTP_422_UNPROCESSABLE_ENTITY])
+    
+    def test_register_password_no_special(self):
+        """USER_001: Test password validation - no special character"""
+        data = {
+            "email": "test3@example.com",
+            "password": "Parole123",  
+            "name": "Test",
+            "last_name": "User",
+            "number": "+37120290000",
+        }
+        response = self.client.post("/api/register/", data, format="json")
+        self.assertIn(response.status_code, [status.HTTP_400_BAD_REQUEST, status.HTTP_422_UNPROCESSABLE_ENTITY])
 
     def test_T6_register_field_too_long(self):
         long_string = "a" * 256
@@ -297,10 +343,81 @@ class UserManagementTests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_T15_view_profile(self):
+        """USER_007: View own profile"""
         self.authenticate_as(self.normal_user)
         response = self.client.get("/api/profile/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["email"], self.normal_user.email)
+    
+    def test_update_profile(self):
+        """USER_002: Update own profile"""
+        self.authenticate_as(self.normal_user)
+        response = self.client.patch(
+            "/api/profile/update/",
+            {"name": "Updated Name", "last_name": "Updated Last"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.normal_user.refresh_from_db()
+        self.assertEqual(self.normal_user.name, "Updated Name")
+    
+    def test_change_password_success(self):
+        """USER_004: Change password with valid new password"""
+        self.authenticate_as(self.normal_user)
+        response = self.client.post(
+            "/api/profile/change-password/",
+            {
+                "old_password": "Password123",
+                "new_password": "NewPass123!",
+                "confirm_password": "NewPass123!",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.normal_user.refresh_from_db()
+        self.assertTrue(self.normal_user.check_password("NewPass123!"))
+    
+    def test_change_password_invalid_old(self):
+        """USER_004: Change password with wrong old password"""
+        self.authenticate_as(self.normal_user)
+        response = self.client.post(
+            "/api/profile/change-password/",
+            {
+                "old_password": "WrongPassword",
+                "new_password": "NewPass123!",
+                "confirm_password": "NewPass123!",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_change_password_weak_new(self):
+        """USER_004: Change password with weak new password"""
+        self.authenticate_as(self.normal_user)
+        response = self.client.post(
+            "/api/profile/change-password/",
+            {
+                "old_password": "Password123",
+                "new_password": "weak",
+                "confirm_password": "weak",
+            },
+            format="json",
+        )
+        self.assertIn(response.status_code, [status.HTTP_400_BAD_REQUEST, status.HTTP_422_UNPROCESSABLE_ENTITY])
+    
+    def test_change_password_mismatch(self):
+        """USER_004: Change password with mismatched confirmation"""
+        self.authenticate_as(self.normal_user)
+        response = self.client.post(
+            "/api/profile/change-password/",
+            {
+                "old_password": "Password123",
+                "new_password": "NewPass123!",
+                "confirm_password": "DifferentPass123!",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
 class ApplicationTests(BaseAPITestCase):
@@ -328,109 +445,163 @@ class ApplicationTests(BaseAPITestCase):
         )
 
     def test_T16_create_application_success(self):
+        """FORM_001: Create application via API endpoint"""
         self.authenticate_as(self.normal_user)
-        application = Pieteikums.objects.create(
-            lietotajs=self.normal_user,
-            olimpiade=self.future_olympiad,
-            statuss="Apstrādē",
+        response = self.client.post(
+            "/api/applications/create/",
+            {"olympiad_id": self.future_olympiad.id},
+            format="json",
         )
-        self.assertEqual(application.statuss, "Apstrādē")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        application = Pieteikums.objects.get(lietotajs=self.normal_user, olimpiade=self.future_olympiad)
+        self.assertEqual(application.statuss, "Reģistrēts")
 
     def test_T17_create_application_past_olympiad(self):
+        """FORM_001: Create application for past olympiad"""
         self.authenticate_as(self.normal_user)
-        application = Pieteikums.objects.create(
-            lietotajs=self.normal_user,
-            olimpiade=self.past_olympiad,
-            statuss="Apstrādē",
+        response = self.client.post(
+            "/api/applications/create/",
+            {"olympiad_id": self.past_olympiad.id},
+            format="json",
         )
-        self.assertIsNotNone(application)
+        self.assertIn(response.status_code, [status.HTTP_201_CREATED, status.HTTP_400_BAD_REQUEST])
 
     def test_T18_create_application_no_school(self):
+        """FORM_001: Create application when user has no school"""
         user_no_school = User.objects.create_user(
             email="noschool@example.com",
             password="Password123",
             user_type="normal",
         )
         self.authenticate_as(user_no_school)
-        application = Pieteikums.objects.create(
-            lietotajs=user_no_school,
-            olimpiade=self.future_olympiad,
-            statuss="Apstrādē",
+        response = self.client.post(
+            "/api/applications/create/",
+            {"olympiad_id": self.future_olympiad.id},
+            format="json",
         )
-        self.assertIsNotNone(application)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    def test_T19_cancel_application(self):
-        self.authenticate_as(self.normal_user)
+    def test_T19_update_application_status_to_ended(self):
+        """FORM_005: Update application status to Beidzies"""
+        self.authenticate_as(self.admin_user)
         application = Pieteikums.objects.create(
             lietotajs=self.normal_user,
-            olimpiade=self.future_olympiad,
-            statuss="Apstrādē",
+            olimpiade=self.past_olympiad,
+            statuss="Reģistrēts",
         )
-        application.statuss = "Atcelts"
-        application.save()
-        self.assertEqual(application.statuss, "Atcelts")
+        response = self.client.patch(
+            "/api/applications/update-status/",
+            {"application_id": application.id, "status": "Beidzies"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        application.refresh_from_db()
+        self.assertEqual(application.statuss, "Beidzies")
 
     def test_T20_admin_delete_application(self):
+        """FORM_003: Admin delete application"""
         self.authenticate_as(self.admin_user)
         application = Pieteikums.objects.create(
             lietotajs=self.normal_user,
             olimpiade=self.future_olympiad,
-            statuss="Apstrādē",
+            statuss="Reģistrēts",
         )
         application_id = application.id
         application.delete()
         self.assertFalse(Pieteikums.objects.filter(id=application_id).exists())
 
     def test_T21_view_own_applications(self):
+        """FORM_002: View own applications via API"""
         self.authenticate_as(self.normal_user)
         Pieteikums.objects.create(
             lietotajs=self.normal_user,
             olimpiade=self.future_olympiad,
-            statuss="Apstrādē",
+            statuss="Reģistrēts",
         )
-        applications = Pieteikums.objects.filter(lietotajs=self.normal_user)
-        self.assertGreater(applications.count(), 0)
+        response = self.client.get("/api/applications/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(len(response.data), 1)
 
     def test_T22_approve_application(self):
+        """FORM_005: Update application status to Apstrādē"""
         self.authenticate_as(self.teacher_user)
         application = Pieteikums.objects.create(
             lietotajs=self.normal_user,
             olimpiade=self.future_olympiad,
-            statuss="Apstrādē",
+            statuss="Reģistrēts",
         )
         response = self.client.patch(
             "/api/applications/update-status/",
-            {"application_id": application.id, "status": "Apstiprināts"},
+            {"application_id": application.id, "status": "Apstrādē"},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         application.refresh_from_db()
-        self.assertEqual(application.statuss, "Apstiprināts")
+        self.assertEqual(application.statuss, "Apstrādē")
 
     def test_T23_reject_application(self):
+        """FORM_005: Update application status to Atteikts"""
         self.authenticate_as(self.teacher_user)
         application = Pieteikums.objects.create(
             lietotajs=self.normal_user,
             olimpiade=self.future_olympiad,
-            statuss="Apstrādē",
+            statuss="Reģistrēts",
         )
         response = self.client.patch(
             "/api/applications/update-status/",
-            {"application_id": application.id, "status": "Atliegts"},
+            {"application_id": application.id, "status": "Atteikts"},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         application.refresh_from_db()
-        self.assertEqual(application.statuss, "Atliegts")
+        self.assertEqual(application.statuss, "Atteikts")
 
     def test_T24_approve_nonexistent_application(self):
+        """FORM_005: Try to update nonexistent application"""
         self.authenticate_as(self.teacher_user)
         response = self.client.patch(
             "/api/applications/update-status/",
-            {"application_id": 99999, "status": "Apstiprināts"},
+            {"application_id": 99999, "status": "Apstrādē"},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    
+    def test_create_application_duplicate(self):
+        """FORM_001: Try to create duplicate application"""
+        self.authenticate_as(self.normal_user)
+        Pieteikums.objects.create(
+            lietotajs=self.normal_user,
+            olimpiade=self.future_olympiad,
+            statuss="Reģistrēts",
+        )
+        response = self.client.post(
+            "/api/applications/create/",
+            {"olympiad_id": self.future_olympiad.id},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_create_application_nonexistent_olympiad(self):
+        """FORM_001: Try to create application for nonexistent olympiad"""
+        self.authenticate_as(self.normal_user)
+        response = self.client.post(
+            "/api/applications/create/",
+            {"olympiad_id": 99999},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    
+    def test_view_user_applications(self):
+        """FORM_002: View own applications"""
+        self.authenticate_as(self.normal_user)
+        Pieteikums.objects.create(
+            lietotajs=self.normal_user,
+            olimpiade=self.future_olympiad,
+            statuss="Reģistrēts",
+        )
+        response = self.client.get("/api/applications/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(len(response.data), 1)
 
 
 class ResultsTests(BaseAPITestCase):
@@ -454,7 +625,8 @@ class ResultsTests(BaseAPITestCase):
         )
 
     def test_T25_view_results(self):
-        response = self.client.get(f"/api/olympiads/{self.olympiad.id}/results/?olympiad_id={self.olympiad.id}")
+        """RES_001: View results for an olympiad"""
+        response = self.client.get(f"/api/olympiads/{self.olympiad.id}/results/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         if isinstance(response.data, list):
             self.assertGreaterEqual(len(response.data), 1)
@@ -482,14 +654,22 @@ class ResultsTests(BaseAPITestCase):
         self.assertFalse(Rezultats.objects.filter(id=nonexistent_id).exists())
 
     def test_T29_publish_results(self):
+        """RES_003: Results are viewable when they exist"""
         self.authenticate_as(self.admin_user)
         results = Rezultats.objects.filter(olimpiade=self.olympiad)
         self.assertGreater(results.count(), 0)
+        response = self.client.get(f"/api/olympiads/{self.olympiad.id}/results/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_T30_publish_already_published(self):
+        """RES_003: Results remain viewable after being published"""
         self.authenticate_as(self.admin_user)
         results = Rezultats.objects.filter(olimpiade=self.olympiad)
         self.assertGreater(results.count(), 0)
+        response1 = self.client.get(f"/api/olympiads/{self.olympiad.id}/results/")
+        response2 = self.client.get(f"/api/olympiads/{self.olympiad.id}/results/")
+        self.assertEqual(response1.status_code, status.HTTP_200_OK)
+        self.assertEqual(response2.status_code, status.HTTP_200_OK)
 
     def test_T31_import_results_success(self):
         self.authenticate_as(self.admin_user)
@@ -959,7 +1139,7 @@ class AccessControlTests(BaseAPITestCase):
             organizetajs="VISC",
             prieksmets=self.prieksmets,
         )
-        response = self.client.get(f"/api/olympiads/{olympiad.id}/results/?olympiad_id={olympiad.id}")
+        response = self.client.get(f"/api/olympiads/{olympiad.id}/results/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_AT34_normal_user_results(self):
@@ -973,7 +1153,7 @@ class AccessControlTests(BaseAPITestCase):
             organizetajs="VISC",
             prieksmets=self.prieksmets,
         )
-        response = self.client.get(f"/api/olympiads/{olympiad.id}/results/?olympiad_id={olympiad.id}")
+        response = self.client.get(f"/api/olympiads/{olympiad.id}/results/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_AT35_teacher_results(self):
@@ -987,7 +1167,7 @@ class AccessControlTests(BaseAPITestCase):
             organizetajs="VISC",
             prieksmets=self.prieksmets,
         )
-        response = self.client.get(f"/api/olympiads/{olympiad.id}/results/?olympiad_id={olympiad.id}")
+        response = self.client.get(f"/api/olympiads/{olympiad.id}/results/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_AT36_admin_results(self):
@@ -1001,7 +1181,7 @@ class AccessControlTests(BaseAPITestCase):
             organizetajs="VISC",
             prieksmets=self.prieksmets,
         )
-        response = self.client.get(f"/api/olympiads/{olympiad.id}/results/?olympiad_id={olympiad.id}")
+        response = self.client.get(f"/api/olympiads/{olympiad.id}/results/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_AT37_unauthenticated_profile(self):

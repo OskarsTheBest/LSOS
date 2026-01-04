@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../axios";
+import { AuthContext } from "../AuthContext";
 
 interface Prieksmets {
   id: number;
@@ -21,7 +23,8 @@ interface Olympiad {
 }
 
 export default function Olympiads() {
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
@@ -33,6 +36,9 @@ export default function Olympiads() {
   const [olympiads, setOlympiads] = useState<Olympiad[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [registrationError, setRegistrationError] = useState("");
+  const [registrationSuccess, setRegistrationSuccess] = useState("");
+  const [registering, setRegistering] = useState(false);
 
   useEffect(() => {
     loadOlympiads();
@@ -83,56 +89,21 @@ export default function Olympiads() {
     }
   };
 
-  const calculateDaysRemaining = (dateStr: string): number => {
-    try {
-      const date = parseDate(dateStr);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      date.setHours(0, 0, 0, 0);
-      const diff = date.getTime() - today.getTime();
-      const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-      return days > 0 ? days : 0;
-    } catch {
-      return 0;
-    }
-  };
-
   // Get unique locations and subjects from loaded olympiads
   const allLocations = Array.from(new Set(olympiads.map(o => o.norisesVieta)));
   const allSubjects = Array.from(new Set(olympiads.map(o => o.prieksmets_nosaukums || "").filter(s => s)));
 
-  // Featured olympiads are the first 3 upcoming olympiads
-  const featuredOlympiads = olympiads
-    .filter(o => {
-      const date = parseDate(o.datums);
-      return date >= new Date();
-    })
-    .sort((a, b) => parseDate(a.datums).getTime() - parseDate(b.datums).getTime())
-    .slice(0, 3)
-    .map(o => ({
-      ...o,
-      dateStart: formatDate(o.datums),
-      dateEnd: "",
-      daysRemaining: calculateDaysRemaining(o.datums),
-      type: "Valsts olimpiāde",
-      subject: o.prieksmets_nosaukums || "",
-      location: o.norisesVieta,
-      name: o.nosaukums
-    }));
-
-  const nextSlide = () => {
-    if (featuredOlympiads.length > 0) {
-      setCurrentSlide((prev) => (prev + 1) % featuredOlympiads.length);
-    }
-  };
-
-  const prevSlide = () => {
-    if (featuredOlympiads.length > 0) {
-      setCurrentSlide((prev) => (prev - 1 + featuredOlympiads.length) % featuredOlympiads.length);
-    }
-  };
-
   let filteredOlympiads = olympiads.filter((olympiad) => {
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const olympiadDate = parseDate(olympiad.datums);
+    olympiadDate.setHours(0, 0, 0, 0);
+    
+    if (olympiadDate < today) {
+      return false; 
+    }
+    
     if (searchTerm) {
       const searchNormalized = removeDiacritics(searchTerm);
       const nameNormalized = removeDiacritics(olympiad.nosaukums);
@@ -153,8 +124,6 @@ export default function Olympiads() {
     }
 
     if (dateFilter === "closest") {
-      const today = new Date();
-      const olympiadDate = parseDate(olympiad.datums);
       return olympiadDate >= today && olympiadDate <= new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
     }
 
@@ -193,6 +162,39 @@ export default function Olympiads() {
     };
   }, [showFilterModal]);
 
+  const handleRegister = async () => {
+    if (!user) {
+      setRegistrationError("Lūdzu, piesakieties, lai reģistrētos olimpiādei");
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
+      return;
+    }
+
+    if (!selectedOlympiad) return;
+
+    setRegistering(true);
+    setRegistrationError("");
+    setRegistrationSuccess("");
+
+    try {
+      await api.post("/api/applications/create/", {
+        olympiad_id: selectedOlympiad.id
+      });
+      setRegistrationSuccess("Jūs esat veiksmīgi reģistrējušies olimpiādei!");
+      setTimeout(() => {
+        setShowDetailModal(false);
+        setRegistrationSuccess("");
+        setRegistrationError("");
+      }, 2000);
+    } catch (err: any) {
+      const errorData = err.response?.data;
+      setRegistrationError(errorData?.detail || "Neizdevās reģistrēties olimpiādei");
+    } finally {
+      setRegistering(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-brand-bg pt-20 pb-12">
       <div className="max-w-7xl mx-auto px-8">
@@ -203,93 +205,6 @@ export default function Olympiads() {
         {error && (
           <div className="mb-4 text-red-400 text-sm bg-red-900/20 p-3 rounded-lg">
             {error}
-          </div>
-        )}
-
-        {featuredOlympiads.length > 0 && (
-          <div className="w-full max-w-5xl mx-auto h-96 relative overflow-hidden rounded-lg shadow-xl mb-12">
-            <button
-              onClick={prevSlide}
-              className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-50 hover:bg-opacity-75 text-gray-800 font-bold py-2 px-4 rounded-r z-20"
-            >
-              ←
-            </button>
-            <button
-              onClick={nextSlide}
-              className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-50 hover:bg-opacity-75 text-gray-800 font-bold py-2 px-4 rounded-l z-20"
-            >
-              →
-            </button>
-
-            {featuredOlympiads.map((olympiad, index) => (
-              <div
-                key={olympiad.id}
-                className={`absolute inset-0 transition-opacity duration-500 ${
-                  index === currentSlide ? 'opacity-100' : 'opacity-0'
-                }`}
-                style={{
-                  background: 'linear-gradient(135deg, #4A90E2 0%, #357ABD 100%)',
-                }}
-              >
-                <div className="relative h-full flex items-center justify-between p-8">
-                  <div className="flex-1 flex items-center justify-center">
-                    <div className="text-white text-6xl font-bold">
-                      {olympiad.type}
-                    </div>
-                  </div>
-
-                  <div className="bg-[#252D47] rounded-lg p-6 w-80 shadow-lg">
-                    <h3 className="text-white text-xl font-bold mb-4">{olympiad.name}</h3>
-                    
-                    <div className="space-y-3 text-white text-sm">
-                      <div className="flex items-center gap-2">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>{olympiad.dateStart}</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span>{olympiad.location}</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <span className="text-red-400">Vēl {olympiad.daysRemaining} dienas</span>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        setSelectedOlympiad(olympiad);
-                        setShowDetailModal(true);
-                      }}
-                      className="mt-6 w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded transition-colors"
-                    >
-                      Apskatīt
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-20">
-              {featuredOlympiads.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentSlide(index)}
-                  className={`w-3 h-3 rounded-full transition-colors ${
-                    index === currentSlide ? 'bg-white' : 'bg-gray-400'
-                  }`}
-                />
-              ))}
-            </div>
           </div>
         )}
 
@@ -450,6 +365,8 @@ export default function Olympiads() {
                     onClick={() => {
                       setSelectedOlympiad(olympiad);
                       setShowDetailModal(true);
+                      setRegistrationError("");
+                      setRegistrationSuccess("");
                     }}
                     className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded transition-colors w-fit"
                   >
@@ -476,79 +393,91 @@ export default function Olympiads() {
       </div>
 
       {showDetailModal && selectedOlympiad && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowDetailModal(false)}>
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="p-8">
-              <button
-                onClick={() => setShowDetailModal(false)}
-                className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl"
-              >
-                ×
-              </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={() => {
+          setShowDetailModal(false);
+          setRegistrationError("");
+          setRegistrationSuccess("");
+        }}>
+          <div className="bg-[#1B2241] rounded-lg max-w-7xl w-full max-h-[95vh] overflow-hidden shadow-2xl relative flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => {
+                setShowDetailModal(false);
+                setRegistrationError("");
+                setRegistrationSuccess("");
+              }}
+              className="absolute top-6 right-6 text-white hover:text-gray-200 text-3xl font-bold z-10"
+            >
+              ×
+            </button>
 
-              <h2 className="text-3xl font-bold text-[#1B2241] mb-6 text-center">
+            {/* Dark Blue Header */}
+            <div className="bg-[#1B2241] text-white p-8 rounded-t-lg">
+              <h2 className="text-4xl font-bold text-center">
                 {selectedOlympiad.nosaukums}
               </h2>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div>
-                  <p className="text-[#1B2241] text-base leading-relaxed">
-                    {selectedOlympiad.apraksts || "Nav pieejams apraksts."}
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <svg className="w-6 h-6 text-[#1B2241]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                    </svg>
-                    <span className="text-[#1B2241] font-medium">{selectedOlympiad.prieksmets_nosaukums || "-"}</span>
+            {/* Main Content Area - Two Columns */}
+            <div className="flex flex-1 overflow-y-auto min-h-0">
+              {/* Left Column - Dark Blue Background with Description */}
+              <div className="flex-1 p-10 bg-[#1B2241] flex flex-col">
+                <p className="text-white text-lg leading-relaxed flex-1">
+                  {selectedOlympiad.apraksts || "Nav pieejams apraksts."}
+                </p>
+                
+                {registrationError && (
+                  <div className="mt-4 text-red-400 text-sm bg-red-900/20 p-3 rounded-lg">
+                    {registrationError}
                   </div>
+                )}
 
-                  <div className="flex items-center gap-3">
-                    <svg className="w-6 h-6 text-[#1B2241]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span className="text-[#1B2241] font-medium">{selectedOlympiad.norisesVieta}</span>
+                {registrationSuccess && (
+                  <div className="mt-4 text-green-400 text-sm bg-green-900/20 p-3 rounded-lg">
+                    {registrationSuccess}
                   </div>
-
-                  <div className="flex items-center gap-3">
-                    <svg className="w-6 h-6 text-[#1B2241]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span className="text-[#1B2241] font-medium">{formatDate(selectedOlympiad.datums)}</span>
-                  </div>
-
-                  {selectedOlympiad.maxDalibnieki && (
-                    <div className="flex items-center gap-3">
-                      <svg className="w-6 h-6 text-[#1B2241]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                      </svg>
-                      <span className="text-[#1B2241] font-medium">Maks. dalībnieki: {selectedOlympiad.maxDalibnieki}</span>
-                    </div>
-                  )}
-
-                  {selectedOlympiad.organizetajs && (
-                    <div className="flex items-center gap-3">
-                      <svg className="w-6 h-6 text-[#1B2241]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                      </svg>
-                      <span className="text-[#1B2241] font-medium">{selectedOlympiad.organizetajs}</span>
-                    </div>
-                  )}
+                )}
+                
+                <div className="mt-10 flex justify-center">
+                  <button
+                    onClick={handleRegister}
+                    disabled={registering}
+                    className="bg-green-500 hover:bg-green-600 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-semibold py-4 px-12 rounded-lg transition-colors text-lg"
+                  >
+                    {registering ? "Reģistrējas..." : "Reģistrēties"}
+                  </button>
                 </div>
               </div>
 
-              <div className="mt-8 flex justify-center">
-                <button
-                  onClick={() => {
-                    setShowDetailModal(false);
-                  }}
-                  className="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-8 rounded-lg transition-colors"
-                >
-                  Reģistrēties
-                </button>
+              {/* Right Column - Dark Blue Background with Info */}
+              <div className="w-96 bg-[#1B2241] text-white p-8 flex flex-col">
+                <div className="space-y-6">
+                  <div className="flex items-center gap-4">
+                    <img 
+                      src={require("../static/Book open.png")} 
+                      alt="Book" 
+                      className="w-8 h-8"
+                    />
+                    <span className="font-medium text-lg">{selectedOlympiad.prieksmets_nosaukums || "-"}</span>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <img 
+                      src={require("../static/location_on.png")} 
+                      alt="Location" 
+                      className="w-8 h-8"
+                    />
+                    <span className="font-medium text-lg">{selectedOlympiad.norisesVieta}</span>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <img 
+                      src={require("../static/Calendar.png")} 
+                      alt="Calendar" 
+                      className="w-8 h-8"
+                    />
+                    <span className="font-medium text-lg">{formatDate(selectedOlympiad.datums)}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

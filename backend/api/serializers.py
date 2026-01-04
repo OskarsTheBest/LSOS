@@ -1,6 +1,26 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import User, Skola, Olimpiade, Prieksmets, Pieteikums, Rezultats
+import re
+
+
+def validate_password_strength(password):
+    """
+    Validates password strength:
+    - At least 8 characters
+    - At least 1 special symbol
+    - At least 1 capital letter
+    """
+    if len(password) < 8:
+        raise serializers.ValidationError("Parolei jābūt vismaz 8 simbolu garai")
+    
+    if not re.search(r'[A-Z]', password):
+        raise serializers.ValidationError("Parolei jāsatur vismaz viens lielais burts")
+    
+    if not re.search(r'[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]', password):
+        raise serializers.ValidationError("Parolei jāsatur vismaz viens speciālais simbols")
+    
+    return password
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -12,6 +32,9 @@ class RegisterSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'user_type': {'default': 'normal'}
         }
+
+    def validate_password(self, value):
+        return validate_password_strength(value)
 
     def create(self, validated_data):
         password = validated_data.pop('password')
@@ -96,6 +119,11 @@ class AdminUserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"skola": "Skolotājiem jābūt pievienotiem skolai"})
         return attrs
     
+    def validate_password(self, value):
+        if value:
+            return validate_password_strength(value)
+        return value
+    
     def create(self, validated_data):
         password = validated_data.pop('password', None)
         if not password:
@@ -119,6 +147,9 @@ class PasswordChangeSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True, write_only=True)
     new_password = serializers.CharField(required=True, write_only=True, min_length=8)
     confirm_password = serializers.CharField(required=True, write_only=True)
+
+    def validate_new_password(self, value):
+        return validate_password_strength(value)
 
     def validate(self, attrs):
         if attrs['new_password'] != attrs['confirm_password']:

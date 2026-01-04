@@ -78,12 +78,17 @@ export default function SchoolApplications() {
     setLoading(true);
     setError("");
     try {
-      const res = await api.get("/api/schools/applications/", {
-        params: { school_id: selectedSchoolId }
-      });
+      const params: any = {};
+      if (isAdmin) {
+        params.school_id = selectedSchoolId;
+      }
+      
+      const res = await api.get("/api/schools/applications/", { params });
       setApplications(res.data);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Neizdevās ielādēt pieteikumus");
+      const errorMsg = err.response?.data?.detail || "Neizdevās ielādēt pieteikumus";
+      setError(errorMsg);
+      setApplications([]);
     } finally {
       setLoading(false);
     }
@@ -115,16 +120,15 @@ export default function SchoolApplications() {
   }
 
   function getStatusColor(status: string): string {
-    switch (status.toLowerCase()) {
-      case "apstiprināts":
-      case "approved":
-        return "bg-green-500";
-      case "noraidīts":
-      case "rejected":
-        return "bg-red-500";
-      case "gaida":
-      case "pending":
+    switch (status) {
+      case "Apstrādē":
         return "bg-yellow-500";
+      case "Atteikts":
+        return "bg-red-500";
+      case "Reģistrēts":
+        return "bg-blue-500";
+      case "Beidzies":
+        return "bg-green-500";
       default:
         return "bg-gray-500";
     }
@@ -262,13 +266,44 @@ export default function SchoolApplications() {
                           </span>
                         </td>
                         <td className="py-4 px-4">
-                          {(isAdmin || isTeacher) && app.statuss.toLowerCase() !== "apstiprināts" && app.statuss.toLowerCase() !== "approved" && (
-                            <button
-                              onClick={() => handleUpdateStatus(app.id, "apstiprināts")}
-                              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-semibold rounded transition-colors"
-                            >
-                              Apstiprināt
-                            </button>
+                          {(isAdmin || isTeacher) && (
+                            <div className="flex gap-2">
+                              {app.statuss === "Reģistrēts" && (
+                                <>
+                                  <button
+                                    onClick={() => handleUpdateStatus(app.id, "Apstrādē")}
+                                    className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-semibold rounded transition-colors"
+                                  >
+                                    Apstiprināt
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdateStatus(app.id, "Atteikts")}
+                                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded transition-colors"
+                                  >
+                                    Noraidīt
+                                  </button>
+                                </>
+                              )}
+                              {app.statuss === "Apstrādē" && (
+                                <button
+                                  onClick={() => handleUpdateStatus(app.id, "Atteikts")}
+                                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded transition-colors"
+                                >
+                                  Noraidīt
+                                </button>
+                              )}
+                              {app.statuss === "Atteikts" && (
+                                <button
+                                  onClick={() => handleUpdateStatus(app.id, "Apstrādē")}
+                                  className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-semibold rounded transition-colors"
+                                >
+                                  Apstiprināt
+                                </button>
+                              )}
+                              {app.statuss === "Beidzies" && (
+                                <span className="text-gray-400 text-sm">Nav pieejamas darbības</span>
+                              )}
+                            </div>
                           )}
                         </td>
                       </tr>

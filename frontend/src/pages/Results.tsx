@@ -83,21 +83,17 @@ export default function Results() {
     try {
       const params = searchTerm ? { search: searchTerm } : {};
       const res = await api.get("/api/olympiads/", { params });
-      // Filter only completed olympiads (those with results)
-      const olympiadsWithResults = await Promise.all(
-        res.data.map(async (olympiad: any) => {
-          try {
-            const resultsRes = await api.get("/api/olympiads/" + olympiad.id + "/results/");
-            if (resultsRes.data && resultsRes.data.length > 0) {
-              return olympiad;
-            }
-            return null;
-          } catch {
-            return null;
-          }
-        })
-      );
-      setOlympiads(olympiadsWithResults.filter((o: any) => o !== null));
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const completedOlympiads = res.data.filter((olympiad: any) => {
+        const olympiadDate = new Date(olympiad.datums);
+        olympiadDate.setHours(0, 0, 0, 0);
+        return olympiadDate < today;
+      });
+      
+      setOlympiads(completedOlympiads);
     } catch (err: any) {
       setError(err.response?.data?.detail || "Neizdevās ielādēt olimpiādes");
     } finally {
@@ -110,15 +106,20 @@ export default function Results() {
     setError("");
     try {
       const res = await api.get(`/api/olympiads/${olympiadId}/results/`);
-      // Calculate percentage (assuming max points is 130, adjust as needed)
-      const maxPoints = 130;
-      const resultsWithPercentage = res.data.map((result: any) => ({
-        ...result,
-        percentage: Math.round((result.punktuSkaits / maxPoints) * 100)
-      }));
-      setResults(resultsWithPercentage);
+     
+      if (res.data && res.data.length > 0) {
+        const maxPoints = Math.max(...res.data.map((r: any) => r.punktuSkaits));
+        const resultsWithPercentage = res.data.map((result: any) => ({
+          ...result,
+          percentage: Math.round((result.punktuSkaits / maxPoints) * 100)
+        }));
+        setResults(resultsWithPercentage);
+      } else {
+        setResults([]);
+      }
     } catch (err: any) {
       setError(err.response?.data?.detail || "Neizdevās ielādēt rezultātus");
+      setResults([]);
     } finally {
       setLoadingResults(false);
     }
@@ -134,6 +135,31 @@ export default function Results() {
     const fullName = `${user.name || ""} ${user.last_name || ""}`.trim();
     return resultName.toLowerCase().includes(fullName.toLowerCase()) || 
            fullName.toLowerCase().includes(resultName.toLowerCase());
+  };
+
+  const censorName = (fullName: string): string => {
+    if (!fullName || fullName.trim() === "") return "N.N";
+    
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      const firstName = parts[0];
+      const lastName = parts[parts.length - 1];
+      const firstInitial = firstName.charAt(0).toUpperCase();
+      const lastInitial = lastName.charAt(0).toUpperCase();
+      return `${firstInitial}.${lastInitial}`;
+    } else if (parts.length === 1) {
+      return `${parts[0].charAt(0).toUpperCase()}.`;
+    }
+    return "N.N";
+  };
+
+  const getDisplayName = (resultName: string): string => {
+    if (isUserResult(resultName)) {
+      
+      return resultName;
+    }
+    
+    return censorName(resultName);
   };
 
   const removeDiacritics = (str: string): string => {
@@ -491,7 +517,7 @@ export default function Results() {
                               {result.vieta}
                             </td>
                             <td className={`py-4 px-4 ${isHighlighted ? "text-brand-gold font-semibold" : "text-white"}`}>
-                              {result.lietotajs_name}
+                              {getDisplayName(result.lietotajs_name)}
                             </td>
                             <td className="py-4 px-4 text-white">
                               {result.punktuSkaits}p {result.percentage ? `${result.percentage}%` : ""}

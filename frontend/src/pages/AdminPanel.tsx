@@ -18,8 +18,7 @@ export default function AdminPanel() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showFilterModal, setShowFilterModal] = useState(false);
-  const [sortBy, setSortBy] = useState<"date" | "name" | "email">("date");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [sortOption, setSortOption] = useState<"date_desc" | "date_asc" | "name_asc" | "name_desc">("date_desc");
   
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createFormData, setCreateFormData] = useState({
@@ -318,23 +317,30 @@ export default function AdminPanel() {
   const sortedUsers = [...users].sort((a, b) => {
     let comparison = 0;
     
-    switch (sortBy) {
-      case "date":
+    switch (sortOption) {
+      case "date_desc":
         const dateA = a.create_date ? new Date(a.create_date).getTime() : 0;
         const dateB = b.create_date ? new Date(b.create_date).getTime() : 0;
-        comparison = dateA - dateB;
+        comparison = dateB - dateA; 
         break;
-      case "name":
+      case "date_asc":
+        const dateA2 = a.create_date ? new Date(a.create_date).getTime() : 0;
+        const dateB2 = b.create_date ? new Date(b.create_date).getTime() : 0;
+        comparison = dateA2 - dateB2; 
+        break;
+      case "name_asc":
         const nameA = `${a.name || ""} ${a.last_name || ""}`.trim().toLowerCase();
         const nameB = `${b.name || ""} ${b.last_name || ""}`.trim().toLowerCase();
-        comparison = nameA.localeCompare(nameB, "lv");
+        comparison = nameA.localeCompare(nameB, "lv"); 
         break;
-      case "email":
-        comparison = (a.email || "").localeCompare(b.email || "", "lv");
+      case "name_desc":
+        const nameA2 = `${a.name || ""} ${a.last_name || ""}`.trim().toLowerCase();
+        const nameB2 = `${b.name || ""} ${b.last_name || ""}`.trim().toLowerCase();
+        comparison = nameB2.localeCompare(nameA2, "lv"); 
         break;
     }
     
-    return sortOrder === "asc" ? comparison : -comparison;
+    return comparison;
   });
 
   useEffect(() => {
@@ -390,27 +396,14 @@ export default function AdminPanel() {
                     <div className="space-y-4">
                       <div>
                         <label className="block text-white font-semibold mb-3">Kārtot pēc</label>
-                        <select
-                          value={sortBy}
-                          onChange={(e) => setSortBy(e.target.value as "date" | "name" | "email")}
-                          className="w-full p-2 rounded-lg bg-[#1B2241] border border-[#3A4562] text-white focus:outline-none focus:border-brand-gold"
-                        >
-                          <option value="date">Konta izveides laiks</option>
-                          <option value="name">Vārds, uzvārds</option>
-                          <option value="email">E-pasts</option>
-                        </select>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-white font-semibold mb-3">Kārtība</label>
                         <div className="space-y-2">
                           <label className="flex items-center gap-2 text-white cursor-pointer">
                             <input
                               type="radio"
-                              name="sortOrder"
-                              value="desc"
-                              checked={sortOrder === "desc"}
-                              onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
+                              name="sortOption"
+                              value="date_desc"
+                              checked={sortOption === "date_desc"}
+                              onChange={(e) => setSortOption(e.target.value as "date_desc" | "date_asc" | "name_asc" | "name_desc")}
                               className="w-4 h-4 text-brand-gold"
                             />
                             Dilšošā (Jaunākie vispirms)
@@ -418,13 +411,35 @@ export default function AdminPanel() {
                           <label className="flex items-center gap-2 text-white cursor-pointer">
                             <input
                               type="radio"
-                              name="sortOrder"
-                              value="asc"
-                              checked={sortOrder === "asc"}
-                              onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
+                              name="sortOption"
+                              value="date_asc"
+                              checked={sortOption === "date_asc"}
+                              onChange={(e) => setSortOption(e.target.value as "date_desc" | "date_asc" | "name_asc" | "name_desc")}
                               className="w-4 h-4 text-brand-gold"
                             />
                             Augošā (Vecākie vispirms)
+                          </label>
+                          <label className="flex items-center gap-2 text-white cursor-pointer">
+                            <input
+                              type="radio"
+                              name="sortOption"
+                              value="name_asc"
+                              checked={sortOption === "name_asc"}
+                              onChange={(e) => setSortOption(e.target.value as "date_desc" | "date_asc" | "name_asc" | "name_desc")}
+                              className="w-4 h-4 text-brand-gold"
+                            />
+                            A-Z
+                          </label>
+                          <label className="flex items-center gap-2 text-white cursor-pointer">
+                            <input
+                              type="radio"
+                              name="sortOption"
+                              value="name_desc"
+                              checked={sortOption === "name_desc"}
+                              onChange={(e) => setSortOption(e.target.value as "date_desc" | "date_asc" | "name_asc" | "name_desc")}
+                              className="w-4 h-4 text-brand-gold"
+                            />
+                            Z-A
                           </label>
                         </div>
                       </div>
@@ -559,18 +574,7 @@ export default function AdminPanel() {
                     <th className="text-left py-4 px-4 text-white font-semibold">Konta vārds uzvārds</th>
                     <th className="text-left py-4 px-4 text-white font-semibold">E-pasts</th>
                     <th className="text-left py-4 px-4 text-white font-semibold">
-                      <button
-                        onClick={() => {
-                          setSortBy("date");
-                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                        }}
-                        className="flex items-center gap-2 hover:text-brand-gold transition-colors"
-                      >
-                        Konta izveides laiks
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </button>
+                      Konta izveides laiks
                     </th>
                     <th className="text-left py-4 px-4 text-white font-semibold">Skola</th>
                     <th className="text-left py-4 px-4 text-white font-semibold">Darbības</th>
@@ -636,29 +640,29 @@ export default function AdminPanel() {
           style={{ backdropFilter: 'blur(8px)' }}
         >
           <div 
-            className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl"
+            className="bg-[#252D47] rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-8 relative">
               <button
                 onClick={() => setShowUserModal(false)}
-                className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-3xl font-bold transition-colors bg-transparent border-none cursor-pointer w-10 h-10 flex items-center justify-center"
+                className="absolute top-4 right-4 text-white hover:text-gray-300 text-3xl font-bold transition-colors bg-transparent border-none cursor-pointer w-10 h-10 flex items-center justify-center"
               >
                 ×
               </button>
 
               <div className="space-y-6">
                 {/* Vārds Uzvārds */}
-                <div className="border-b border-gray-200 pb-4">
-                  <label className="block text-gray-700 font-semibold mb-3">Vārds Uzvārds</label>
+                <div className="border-b border-[#3A4562] pb-4">
+                  <label className="block text-white font-semibold mb-3">Vārds Uzvārds</label>
                   <div className="grid grid-cols-2 gap-4">
                     <input
                       type="text"
                       value={userFormData.name}
                       onChange={(e) => setUserFormData({ ...userFormData, name: e.target.value })}
                       disabled={!isAdmin}
-                      className={`w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold ${
-                        !isAdmin ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : ''
+                      className={`w-full p-3 border border-[#3A4562] rounded-lg bg-[#1B2241] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-gold ${
+                        !isAdmin ? 'opacity-50 cursor-not-allowed' : ''
                       }`}
                       placeholder="Vārds"
                     />
@@ -667,8 +671,8 @@ export default function AdminPanel() {
                       value={userFormData.last_name}
                       onChange={(e) => setUserFormData({ ...userFormData, last_name: e.target.value })}
                       disabled={!isAdmin}
-                      className={`w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold ${
-                        !isAdmin ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : ''
+                      className={`w-full p-3 border border-[#3A4562] rounded-lg bg-[#1B2241] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-gold ${
+                        !isAdmin ? 'opacity-50 cursor-not-allowed' : ''
                       }`}
                       placeholder="Uzvārds"
                     />
@@ -676,30 +680,30 @@ export default function AdminPanel() {
                 </div>
 
                 {/* E-pasta adrese */}
-                <div className="border-b border-gray-200 pb-4">
-                  <label className="block text-gray-700 font-semibold mb-3">E-pasta adrese</label>
+                <div className="border-b border-[#3A4562] pb-4">
+                  <label className="block text-white font-semibold mb-3">E-pasta adrese</label>
                   <input
                     type="email"
                     value={userFormData.email}
                     disabled
-                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
+                    className="w-full p-3 border border-[#3A4562] rounded-lg bg-[#1B2241] text-white opacity-50 cursor-not-allowed"
                   />
                 </div>
 
                 {/* Parole */}
-                <div className="border-b border-gray-200 pb-4">
-                  <label className="block text-gray-700 font-semibold mb-3">Parole</label>
+                <div className="border-b border-[#3A4562] pb-4">
+                  <label className="block text-white font-semibold mb-3">Parole</label>
                   <div className="relative">
                     <input
                       type={showPassword ? "text" : "password"}
                       value={userFormData.password}
                       disabled
-                      className="w-full p-3 pr-12 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
+                      className="w-full p-3 pr-12 border border-[#3A4562] rounded-lg bg-[#1B2241] text-white opacity-50 cursor-not-allowed"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 bg-transparent border-none cursor-pointer"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white bg-transparent border-none cursor-pointer"
                     >
                       {showPassword ? (
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -716,8 +720,8 @@ export default function AdminPanel() {
                 </div>
 
                 {/* Skola */}
-                <div className="border-b border-gray-200 pb-4">
-                  <label className="block text-gray-700 font-semibold mb-3">Skola</label>
+                <div className="border-b border-[#3A4562] pb-4">
+                  <label className="block text-white font-semibold mb-3">Skola</label>
                   <div className="relative">
                     <select
                       value={userFormData.schoolId || ""}
@@ -731,13 +735,13 @@ export default function AdminPanel() {
                         });
                       }}
                       disabled={!isAdmin}
-                      className={`w-full p-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold appearance-none ${
-                        !isAdmin ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'
+                      className={`w-full p-3 pr-12 border border-[#3A4562] rounded-lg bg-[#1B2241] text-white focus:outline-none focus:ring-2 focus:ring-brand-gold appearance-none ${
+                        !isAdmin ? 'opacity-50 cursor-not-allowed' : ''
                       }`}
                     >
-                      <option value="">Nav skolas</option>
+                      <option value="" className="bg-[#1B2241] text-white">Nav skolas</option>
                       {schools.map((school) => (
-                        <option key={school.id} value={school.id}>
+                        <option key={school.id} value={school.id} className="bg-[#1B2241] text-white">
                           {school.nosaukums}
                         </option>
                       ))}
@@ -749,23 +753,23 @@ export default function AdminPanel() {
                 </div>
 
                 {/* Telefona numurs */}
-                <div className="border-b border-gray-200 pb-4">
-                  <label className="block text-gray-700 font-semibold mb-3">Telefona numurs</label>
+                <div className="border-b border-[#3A4562] pb-4">
+                  <label className="block text-white font-semibold mb-3">Telefona numurs</label>
                   <input
                     type="text"
                     value={userFormData.number}
                     onChange={(e) => setUserFormData({ ...userFormData, number: e.target.value })}
                     disabled={!isAdmin}
-                    className={`w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold ${
-                      !isAdmin ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : ''
+                    className={`w-full p-3 border border-[#3A4562] rounded-lg bg-[#1B2241] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-gold ${
+                      !isAdmin ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                     placeholder="+371 12345678"
                   />
                 </div>
 
                 {/* Lietotāja tips */}
-                <div className="border-b border-gray-200 pb-4">
-                  <label className="block text-gray-700 font-semibold mb-3">Lietotāja tips</label>
+                <div className="border-b border-[#3A4562] pb-4">
+                  <label className="block text-white font-semibold mb-3">Lietotāja tips</label>
                   <div className="flex gap-6">
                     <label className={`flex items-center gap-2 ${!isAdmin ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
                       <input
@@ -777,7 +781,7 @@ export default function AdminPanel() {
                         disabled={!isAdmin}
                         className="w-4 h-4 text-brand-gold"
                       />
-                      <span className="text-gray-700">Lietotājs</span>
+                      <span className="text-white">Lietotājs</span>
                     </label>
                     <label className={`flex items-center gap-2 ${!isAdmin ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
                       <input
@@ -789,7 +793,7 @@ export default function AdminPanel() {
                         disabled={!isAdmin}
                         className="w-4 h-4 text-brand-gold"
                       />
-                      <span className="text-gray-700">Darbinieks</span>
+                      <span className="text-white">Darbinieks</span>
                     </label>
                     <label className={`flex items-center gap-2 ${!isAdmin ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
                       <input
@@ -801,7 +805,7 @@ export default function AdminPanel() {
                         disabled={!isAdmin}
                         className="w-4 h-4 text-brand-gold"
                       />
-                      <span className="text-gray-700">Administrators</span>
+                      <span className="text-white">Administrators</span>
                     </label>
                   </div>
                 </div>
@@ -833,7 +837,7 @@ export default function AdminPanel() {
                 
                 {isTeacher && (
                   <div className="pt-4 text-center">
-                    <p className="text-gray-500 text-sm">Skolotājiem nav tiesību rediģēt kontus</p>
+                    <p className="text-gray-400 text-sm">Skolotājiem nav tiesību rediģēt kontus</p>
                   </div>
                 )}
               </div>

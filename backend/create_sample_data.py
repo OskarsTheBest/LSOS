@@ -118,9 +118,10 @@ def create_sample_data():
     print("\n4. Creating Olympiads...")
     today = timezone.now().date()
     olympiads_data = [
+
         {
-            "nosaukums": "Matemātikas valsts olimpiāde 2025",
-            "datums": today - timedelta(days=30),
+            "nosaukums": "Matemātikas valsts olimpiāde 2024",
+            "datums": today - timedelta(days=180),
             "maxDalibnieki": 50,
             "apraksts": "Latvijas valsts matemātikas olimpiāde, kurā piedalās skolēni no visas valsts. Olimpiāde ietver gan teorētiskos, gan praktiskos uzdevumus.",
             "norisesVieta": "Rīgas 1. ģimnāzijā",
@@ -128,8 +129,8 @@ def create_sample_data():
             "prieksmets": "Matemātika"
         },
         {
-            "nosaukums": "Fizikas valsts olimpiāde 2025",
-            "datums": today - timedelta(days=25),
+            "nosaukums": "Fizikas valsts olimpiāde 2024",
+            "datums": today - timedelta(days=150),
             "maxDalibnieki": 40,
             "apraksts": "Valsts fizikas olimpiāde, kurā skolēni demonstrē savas zināšanas fizikas jomā.",
             "norisesVieta": "Rīgas Tehniskajā universitātē",
@@ -137,8 +138,8 @@ def create_sample_data():
             "prieksmets": "Fizika"
         },
         {
-            "nosaukums": "Ķīmijas valsts olimpiāde 2025",
-            "datums": today - timedelta(days=20),
+            "nosaukums": "Ķīmijas valsts olimpiāde 2024",
+            "datums": today - timedelta(days=120),
             "maxDalibnieki": 35,
             "apraksts": "Valsts ķīmijas olimpiāde ar praktiskajiem eksperimentiem un teorētiskajiem uzdevumiem.",
             "norisesVieta": "Latvijas Universitātē",
@@ -146,8 +147,8 @@ def create_sample_data():
             "prieksmets": "Ķīmija"
         },
         {
-            "nosaukums": "Bioloģijas olimpiāde 2025",
-            "datums": today - timedelta(days=15),
+            "nosaukums": "Bioloģijas olimpiāde 2024",
+            "datums": today - timedelta(days=90),
             "maxDalibnieki": 45,
             "apraksts": "Valsts bioloģijas olimpiāde, kurā skolēni pārbauda savas zināšanas bioloģijā.",
             "norisesVieta": "Daugavpils Universitātē",
@@ -155,8 +156,8 @@ def create_sample_data():
             "prieksmets": "Bioloģija"
         },
         {
-            "nosaukums": "Vēstures olimpiāde 2025",
-            "datums": today - timedelta(days=10),
+            "nosaukums": "Vēstures olimpiāde 2024",
+            "datums": today - timedelta(days=60),
             "maxDalibnieki": 30,
             "apraksts": "Valsts vēstures olimpiāde, kurā skolēni demonstrē zināšanas par Latvijas un pasaules vēsturi.",
             "norisesVieta": "Rīgas 1. ģimnāzijā",
@@ -164,13 +165,41 @@ def create_sample_data():
             "prieksmets": "Vēsture"
         },
         {
-            "nosaukums": "Angļu valodas olimpiāde 2025",
-            "datums": today + timedelta(days=10),
+            "nosaukums": "Latviešu valodas olimpiāde 2024",
+            "datums": today - timedelta(days=45),
+            "maxDalibnieki": 35,
+            "apraksts": "Valsts latviešu valodas olimpiāde, kurā skolēni pārbauda savas valodas prasmes.",
+            "norisesVieta": "Rīgas Centra humanitārā vidusskolā",
+            "organizetajs": "VISC",
+            "prieksmets": "Latviešu valoda"
+        },
+        {
+            "nosaukums": "Angļu valodas olimpiāde 2024",
+            "datums": today - timedelta(days=30),
             "maxDalibnieki": 60,
             "apraksts": "Valsts angļu valodas olimpiāde, kurā skolēni pārbauda savas valodas prasmes.",
             "norisesVieta": "Rīgas 2. ģimnāzijā",
             "organizetajs": "VISC",
             "prieksmets": "Angļu valoda"
+        },
+        {
+            "nosaukums": "Informātikas olimpiāde 2024",
+            "datums": today - timedelta(days=15),
+            "maxDalibnieki": 50,
+            "apraksts": "Valsts informātikas olimpiāde ar programmēšanas uzdevumiem.",
+            "norisesVieta": "Rīgas Tehniskajā universitātē",
+            "organizetajs": "RTU",
+            "prieksmets": "Informātika"
+        },
+
+        {
+            "nosaukums": "Matemātikas valsts olimpiāde 2025",
+            "datums": today + timedelta(days=30),
+            "maxDalibnieki": 50,
+            "apraksts": "Latvijas valsts matemātikas olimpiāde, kurā piedalās skolēni no visas valsts. Olimpiāde ietver gan teorētiskos, gan praktiskos uzdevumus.",
+            "norisesVieta": "Rīgas 1. ģimnāzijā",
+            "organizetajs": "VISC",
+            "prieksmets": "Matemātika"
         },
         {
             "nosaukums": "Vācu valodas olimpiāde 2025",
@@ -180,24 +209,6 @@ def create_sample_data():
             "norisesVieta": "Rīgas Valsts vācu ģimnāzijā",
             "organizetajs": "VISC",
             "prieksmets": "Vācu valoda"
-        },
-        {
-            "nosaukums": "Informātikas olimpiāde 2025",
-            "datums": today + timedelta(days=30),
-            "maxDalibnieki": 50,
-            "apraksts": "Valsts informātikas olimpiāde ar programmēšanas uzdevumiem.",
-            "norisesVieta": "Rīgas Tehniskajā universitātē",
-            "organizetajs": "RTU",
-            "prieksmets": "Informātika"
-        },
-        {
-            "nosaukums": "Latviešu valodas olimpiāde 2025",
-            "datums": today - timedelta(days=5),
-            "maxDalibnieki": 35,
-            "apraksts": "Valsts latviešu valodas olimpiāde, kurā skolēni pārbauda savas valodas prasmes.",
-            "norisesVieta": "Rīgas Centra humanitārā vidusskolā",
-            "organizetajs": "VISC",
-            "prieksmets": "Latviešu valoda"
         },
         {
             "nosaukums": "Ģeogrāfijas olimpiāde 2025",
@@ -223,52 +234,92 @@ def create_sample_data():
                 "prieksmets": prieksmeti[o_data["prieksmets"]]
             }
         )
+
+        if not created:
+            olympiad.datums = o_data["datums"]
+            olympiad.maxDalibnieki = o_data["maxDalibnieki"]
+            olympiad.apraksts = o_data["apraksts"]
+            olympiad.norisesVieta = o_data["norisesVieta"]
+            olympiad.organizetajs = o_data["organizetajs"]
+            olympiad.prieksmets = prieksmeti[o_data["prieksmets"]]
+            olympiad.save()
         olympiads[o_data["nosaukums"]] = olympiad
         if created:
             print(f"  ✓ Created: {o_data['nosaukums']}")
         else:
-            print(f"  - Already exists: {o_data['nosaukums']}")
+            print(f"  - Updated: {o_data['nosaukums']}")
     
     print("\n5. Creating Results...")
     completed_olympiads = [o for o in olympiads.values() if o.datums < today]
+    print(f"  Found {len(completed_olympiads)} completed olympiads (date < {today})")
     
-    for olympiad in completed_olympiads:
+    if not completed_olympiads:
+        print("  ⚠ No completed olympiads found! Check if olympiad dates are in the past.")
+    else:
         normal_users = [u for u in users.values() if u.user_type == "normal"]
-        participants = random.sample(normal_users, min(random.randint(10, 20), len(normal_users)))
+        print(f"  Found {len(normal_users)} normal users")
         
-        max_points = random.randint(100, 150)
-        results_created = 0
-        
-        for rank, participant in enumerate(participants, start=1):
-            base_score = max_points - (rank - 1) * random.uniform(2, 5)
-            score = max(0, min(max_points, round(base_score + random.uniform(-3, 3), 1)))
-            
-            result, created = Rezultats.objects.get_or_create(
-                olimpiade=olympiad,
-                lietotajs=participant,
-                defaults={
-                    "vieta": rank,
-                    "punktuSkaits": score,
-                    "rezultataDatums": olympiad.datums + timedelta(days=1)
-                }
-            )
-            if created:
-                results_created += 1
-        
-        print(f"  ✓ Created {results_created} results for: {olympiad.nosaukums}")
+        if not normal_users:
+            print("  ⚠ No normal users found! Cannot create results.")
+        else:
+            for olympiad in completed_olympiads:
+
+                deleted_count = Rezultats.objects.filter(olimpiade=olympiad).delete()[0]
+                if deleted_count > 0:
+                    print(f"  - Deleted {deleted_count} existing results for: {olympiad.nosaukums}")
+                
+
+                if "Angļu valodas olimpiāde 2024" in olympiad.nosaukums:
+                    num_participants = min(random.randint(40, 60), len(normal_users))
+                else:
+
+                    num_participants = min(random.randint(15, 25), len(normal_users))
+                
+                participants = random.sample(normal_users, num_participants)
+                
+                max_points = random.randint(120, 150)
+                results_created = 0
+                
+                try:
+
+                    participant_scores = []
+                    for i, participant in enumerate(participants):
+                        base_score = max_points - i * random.uniform(2, 4)
+                        score = max(0, min(max_points, round(base_score + random.uniform(-2, 2), 1)))
+                        participant_scores.append((participant, score))
+
+                    participant_scores.sort(key=lambda x: x[1], reverse=True)
+                    
+                    for rank, (participant, score) in enumerate(participant_scores, start=1):
+                        Rezultats.objects.create(
+                            olimpiade=olympiad,
+                            lietotajs=participant,
+                            vieta=rank,
+                            punktuSkaits=score,
+                            rezultataDatums=olympiad.datums + timedelta(days=1)
+                        )
+                        results_created += 1
+                    
+                    print(f"  ✓ Created {results_created} results for: {olympiad.nosaukums} (date: {olympiad.datums})")
+                except Exception as e:
+                    print(f"  ✗ Error creating results for {olympiad.nosaukums}: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
     
     print("\n6. Creating Applications...")
     upcoming_olympiads = [o for o in olympiads.values() if o.datums >= today]
+    completed_olympiads = [o for o in olympiads.values() if o.datums < today]
     normal_users_list = [u for u in users.values() if u.user_type == "normal"]
     
     applications_created = 0
-    for olympiad in upcoming_olympiads[:3]:
+    
+    for olympiad in upcoming_olympiads:
         applicants = random.sample(normal_users_list, min(random.randint(5, 15), len(normal_users_list)))
         
         for applicant in applicants:
             if not Pieteikums.objects.filter(olimpiade=olympiad, lietotajs=applicant).exists():
-                status_choices = ["pending", "approved", "rejected"]
-                weights = [0.4, 0.5, 0.1]
+                status_choices = ["Reģistrēts", "Apstrādē", "Atteikts"]
+                weights = [0.4, 0.4, 0.2]
                 status = random.choices(status_choices, weights=weights)[0]
                 
                 Pieteikums.objects.create(
@@ -278,6 +329,20 @@ def create_sample_data():
                     pieteikumaDatums=olympiad.datums - timedelta(days=random.randint(5, 30))
                 )
                 applications_created += 1
+    
+
+    for olympiad in completed_olympiads:
+        result_users = [r.lietotajs for r in Rezultats.objects.filter(olimpiade=olympiad) if r.lietotajs]
+        if result_users:
+            for participant in result_users:
+                if not Pieteikums.objects.filter(olimpiade=olympiad, lietotajs=participant).exists():
+                    Pieteikums.objects.create(
+                        olimpiade=olympiad,
+                        lietotajs=participant,
+                        statuss="Beidzies",
+                        pieteikumaDatums=olympiad.datums - timedelta(days=random.randint(10, 60))
+                    )
+                    applications_created += 1
     
     print(f"  ✓ Created {applications_created} applications")
     

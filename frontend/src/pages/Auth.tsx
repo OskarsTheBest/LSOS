@@ -2,6 +2,7 @@ import React, { useContext, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { AuthContext } from "../AuthContext";
 import { messages } from "../messages";
+import { validatePassword } from "../utils/passwordValidation";
 
 export default function Auth() {
   const { login, register } = useContext(AuthContext);
@@ -45,6 +46,11 @@ export default function Auth() {
       }
       if (password !== confirmPassword) {
         setError(messages.E008);
+        return false;
+      }
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.isValid) {
+        setError(passwordValidation.error || "Nepareiza parole");
         return false;
       }
       if (number && !/^\+?\d{7,15}$/.test(number)) {
@@ -196,7 +202,7 @@ export default function Auth() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full p-3 rounded-lg bg-[#252D47] border border-[#3A4562] text-white placeholder-gray-400 focus:outline-none focus:border-brand-gold"
-                    placeholder="Parole123"
+                    placeholder="Min. 8 simboli, 1 lielais burts, 1 speciālais simbols"
                   />
                 </div>
 
@@ -211,7 +217,7 @@ export default function Auth() {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         className="w-full p-3 rounded-lg bg-[#252D47] border border-[#3A4562] text-white placeholder-gray-400 focus:outline-none focus:border-brand-gold"
-                        placeholder="Parole123"
+                        placeholder="Atkārtojiet paroli"
                       />
                     </div>
                   </>

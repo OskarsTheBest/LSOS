@@ -6,7 +6,7 @@ from api.views import (
     PasswordChangeView, SchoolListView, SchoolDetailView, SchoolCreateView, SchoolUpdateView, SchoolDeleteView,
     AddUserToSchoolView, RemoveUserFromSchoolView, SchoolUsersListView, UsersWithoutSchoolListView,
     PrieksmetsListView, OlympiadListView, OlympiadDetailView, OlympiadCreateView, OlympiadUpdateView, OlympiadDeleteView,
-    SchoolApplicationsListView, UpdateApplicationStatusView, OlympiadResultsListView, ImportResultsView
+    SchoolApplicationsListView, UserApplicationsListView, CreateApplicationView, UpdateApplicationStatusView, OlympiadResultsListView, ImportResultsView
 )
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
@@ -42,5 +42,7 @@ urlpatterns = [
     path("api/olympiads/<int:pk>/results/", OlympiadResultsListView.as_view(), name="olympiad_results_list"),
     path("api/results/import/", ImportResultsView.as_view(), name="import_results"),
     path("api/schools/applications/", SchoolApplicationsListView.as_view(), name="school_applications_list"),
+    path("api/applications/", UserApplicationsListView.as_view(), name="user_applications_list"),
+    path("api/applications/create/", CreateApplicationView.as_view(), name="create_application"),
     path("api/applications/update-status/", UpdateApplicationStatusView.as_view(), name="update_application_status"),
 ]

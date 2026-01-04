@@ -413,56 +413,56 @@ export default function SchoolsList() {
           style={{ backdropFilter: 'blur(8px)' }}
         >
           <div 
-            className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl"
+            className="bg-[#252D47] rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-8 relative">
               <button
                 onClick={() => setShowSchoolModal(false)}
-                className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-3xl font-bold transition-colors bg-transparent border-none cursor-pointer w-10 h-10 flex items-center justify-center"
+                className="absolute top-4 right-4 text-white hover:text-gray-300 text-3xl font-bold transition-colors bg-transparent border-none cursor-pointer w-10 h-10 flex items-center justify-center"
               >
                 ×
               </button>
 
               <div className="space-y-6">
                 {/* Nosaukums */}
-                <div className="border-b border-gray-200 pb-4">
-                  <label className="block text-gray-700 font-semibold mb-3">Nosaukums</label>
+                <div className="border-b border-[#3A4562] pb-4">
+                  <label className="block text-white font-semibold mb-3">Nosaukums</label>
                   <input
                     type="text"
                     value={schoolFormData.nosaukums}
                     onChange={(e) => setSchoolFormData({ ...schoolFormData, nosaukums: e.target.value })}
                     disabled={!isAdmin}
-                    className={`w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold ${
-                      !isAdmin ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : ''
+                    className={`w-full p-3 border border-[#3A4562] rounded-lg bg-[#1B2241] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-gold ${
+                      !isAdmin ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   />
                 </div>
 
                 {/* Pilsēta/Pasvaldība */}
-                <div className="border-b border-gray-200 pb-4">
-                  <label className="block text-gray-700 font-semibold mb-3">Pilsēta/Pasvaldība</label>
+                <div className="border-b border-[#3A4562] pb-4">
+                  <label className="block text-white font-semibold mb-3">Pilsēta/Pasvaldība</label>
                   <input
                     type="text"
                     value={schoolFormData.pasvaldiba}
                     onChange={(e) => setSchoolFormData({ ...schoolFormData, pasvaldiba: e.target.value })}
                     disabled={!isAdmin}
-                    className={`w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold ${
-                      !isAdmin ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : ''
+                    className={`w-full p-3 border border-[#3A4562] rounded-lg bg-[#1B2241] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-gold ${
+                      !isAdmin ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   />
                 </div>
 
                 {/* Adrese */}
-                <div className="border-b border-gray-200 pb-4">
-                  <label className="block text-gray-700 font-semibold mb-3">Adrese</label>
+                <div className="border-b border-[#3A4562] pb-4">
+                  <label className="block text-white font-semibold mb-3">Adrese</label>
                   <input
                     type="text"
                     value={schoolFormData.adrese}
                     onChange={(e) => setSchoolFormData({ ...schoolFormData, adrese: e.target.value })}
                     disabled={!isAdmin}
-                    className={`w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold ${
-                      !isAdmin ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : ''
+                    className={`w-full p-3 border border-[#3A4562] rounded-lg bg-[#1B2241] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-gold ${
+                      !isAdmin ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   />
                 </div>

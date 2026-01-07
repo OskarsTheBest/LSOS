@@ -15,7 +15,7 @@ export default function AdminRoute({ children }: { children: ReactElement }) {
     return <Navigate to="/login" />;
   }
 
-  if (user.user_type !== "admin") {
+  if (user.user_type !== "admin" && user.user_type !== "teacher") {
     return <Navigate to="/profile" />;
   }
 

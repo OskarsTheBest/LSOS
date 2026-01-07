@@ -33,7 +33,7 @@ export default function Profile() {
         name: user.name || "",
         last_name: user.last_name || "",
         number: user.number || "",
-        school: "",
+        school: user.skola_nosaukums || "Nav norādīta",
         user_type: user.user_type || "normal"
       });
     }
@@ -324,10 +324,10 @@ export default function Profile() {
                     <label className="block text-white mb-2 font-medium">Skola</label>
                     <input
                       type="text"
-                      value={formData.school}
+                      value={user.skola_nosaukums || "Nav norādīta"}
                       disabled
                       className="w-full p-3 rounded-lg bg-[#1B2241] border border-[#3A4562] text-gray-400 cursor-not-allowed focus:outline-none"
-                      placeholder="Rīgas Valsts 1. ģimnāzija"
+                      placeholder="Nav norādīta"
                     />
                   </div>
 

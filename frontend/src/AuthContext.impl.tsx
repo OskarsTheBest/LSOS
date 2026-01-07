@@ -31,6 +31,7 @@ type AdminUserUpdatePayload = {
   name?: string;
   last_name?: string;
   number?: string;
+  skola?: number | null;
 };
 
 interface AuthContextType {

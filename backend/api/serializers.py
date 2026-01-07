@@ -36,6 +36,17 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate_password(self, value):
         return validate_password_strength(value)
 
+    def validate_user_type(self, value):
+        request = self.context.get('request')
+        if value not in ['normal', 'teacher', 'admin']:
+            raise serializers.ValidationError("Nepareizs lietotāja tips")
+        if request and hasattr(request, 'user') and request.user and request.user.is_authenticated:
+            if request.user.user_type != 'admin' and value != 'normal':
+                raise serializers.ValidationError("Jums nav tiesības izveidot šo lietotāja tipu")
+        else:
+            if value != 'normal':
+                raise serializers.ValidationError("Jums nav tiesības izveidot šo lietotāja tipu")
+        return value
     def create(self, validated_data):
         password = validated_data.pop('password')
         user = User.objects.create_user(password=password, **validated_data)
@@ -109,14 +120,21 @@ class AdminUserSerializer(serializers.ModelSerializer):
         return value
     
     def validate_user_type(self, value):
+        request = self.context.get('request')
+        if request and hasattr(request, 'user') and request.user.is_authenticated:
+            if request.user.user_type == 'teacher' and value != 'normal':
+                raise serializers.ValidationError("Skolotāji var izveidot tikai parastos lietotājus")
         if value not in ['normal', 'teacher', 'admin']:
             raise serializers.ValidationError("Nepareizs lietotāja tips")
         return value
     
     def validate(self, attrs):
-        # Require school for teachers
-        if attrs.get('user_type') == 'teacher' and not attrs.get('skola'):
-            raise serializers.ValidationError({"skola": "Skolotājiem jābūt pievienotiem skolai"})
+        if attrs.get('user_type') == 'teacher':
+            has_school_in_attrs = 'skola' in attrs and attrs['skola']
+            if not self.instance and not has_school_in_attrs:
+                raise serializers.ValidationError({"skola": "Skolotājiem jābūt pievienotiem skolai"})
+            elif self.instance and not has_school_in_attrs and not self.instance.skola:
+                raise serializers.ValidationError({"skola": "Skolotājiem jābūt pievienotiem skolai"})
         return attrs
     
     def validate_password(self, value):

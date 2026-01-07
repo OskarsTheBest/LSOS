@@ -90,9 +90,14 @@ class UserListSearchView(generics.ListAPIView):
 
 
 class AdminUserCreateView(generics.CreateAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsTeacherOrAdmin]
     serializer_class = AdminUserSerializer
     queryset = User.objects.all()
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
 
 class AdminUserUpdateView(generics.UpdateAPIView):
@@ -204,6 +209,9 @@ class AddUserToSchoolView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         user_id = request.data.get('user_id')
         school_id = request.data.get('school_id')
+        school_id = request.data.get('school_id')
+        school_id = request.data.get('school_id')
+        school_id = request.data.get('school_id')
         
         if not user_id or not school_id:
             return Response(
@@ -231,10 +239,21 @@ class AddUserToSchoolView(generics.GenericAPIView):
                 {"detail": "Administratorus nevar pievienot skolām"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+        if request.user.user_type == 'teacher':
+            if not request.user.skola or request.user.skola.id != school.id:
+                return Response(
+                    {"detail": "Jums nav tiesību pievienot lietotājus šai skolai"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            if user.user_type == 'teacher':
+                return Response(
+                    {"detail": "Jums nav tiesību pievienot skolotājus"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
         user.skola = school
         user.save()
-        
+
         return Response(
             {"detail": f"Lietotājs veiksmīgi pievienots skolai {school.nosaukums}"},
             status=status.HTTP_200_OK
@@ -247,6 +266,7 @@ class RemoveUserFromSchoolView(generics.GenericAPIView):
     
     def post(self, request, *args, **kwargs):
         user_id = request.data.get('user_id')
+        school_id = request.data.get('school_id')
         
         if not user_id:
             return Response(
@@ -261,6 +281,16 @@ class RemoveUserFromSchoolView(generics.GenericAPIView):
                 {"detail": "Lietotājs nav atrasts"},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+        school = None
+        if school_id:
+            try:
+                school = Skola.objects.get(id=school_id)
+            except Skola.DoesNotExist:
+                return Response(
+                    {"detail": "Skola nav atrasta"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
         
         # Prevent removing admin users (they shouldn't be in schools anyway)
         if user.user_type == 'admin':
@@ -268,11 +298,33 @@ class RemoveUserFromSchoolView(generics.GenericAPIView):
                 {"detail": "Administratorus nevar noņemt no skolām"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
+        if request.user.user_type == 'teacher':
+            if not request.user.skola:
+                return Response(
+                    {"detail": "Jums nav tiesību noņemt lietotājus"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            if school and school.id != request.user.skola.id:
+                return Response(
+                    {"detail": "Jums nav tiesību noņemt lietotājus no šīs skolas"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            if user.skola != request.user.skola:
+                return Response(
+                    {"detail": "Jums nav tiesību noņemt lietotāju no citas skolas"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            if user.user_type == 'teacher':
+                return Response(
+                    {"detail": "Jums nav tiesību noņemt skolotājus"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
         school_name = user.skola.nosaukums if user.skola else None
         user.skola = None
         user.save()
-        
+
         return Response(
             {"detail": f"Lietotājs veiksmīgi noņemts no skolas" + (f" {school_name}" if school_name else "")},
             status=status.HTTP_200_OK
@@ -288,7 +340,13 @@ class SchoolUsersListView(generics.ListAPIView):
         school_id = self.request.query_params.get('school_id')
         if not school_id:
             return User.objects.none()
-        
+        user = self.request.user
+
+        if user.user_type == 'teacher':
+            if not user.skola:
+                return User.objects.none()
+            return User.objects.filter(skola=user.skola).exclude(user_type='admin').order_by('name', 'last_name')
+
         try:
             school = Skola.objects.get(id=school_id)
             # Filter out admin users from school users list (they shouldn't be in schools)

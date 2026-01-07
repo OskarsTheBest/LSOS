@@ -130,7 +130,8 @@ export default function ManageSchoolUsers() {
     
     try {
       await api.post("/api/schools/remove-user/", {
-        user_id: userId
+        user_id: userId,
+        school_id: selectedSchool
       });
       setSuccess("Lietotājs veiksmīgi noņemts no skolas");
       loadSchoolUsers();

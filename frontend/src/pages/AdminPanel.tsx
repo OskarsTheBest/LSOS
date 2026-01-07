@@ -27,7 +27,8 @@ export default function AdminPanel() {
     name: "",
     last_name: "",
     number: "",
-    user_type: "normal"
+    user_type: "normal",
+    schoolId: null as number | null
   });
   
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
@@ -105,8 +106,22 @@ export default function AdminPanel() {
       return;
     }
 
+    // Validate that teachers have a school assigned
+    if (createFormData.user_type === "teacher" && !createFormData.schoolId) {
+      setError("Skolotājiem jābūt pievienotiem skolai");
+      return;
+    }
+
     try {
-      await createUser(createFormData);
+      await createUser({
+        email: createFormData.email,
+        password: createFormData.password,
+        name: createFormData.name,
+        last_name: createFormData.last_name,
+        number: createFormData.number,
+        user_type: createFormData.user_type,
+        skola: createFormData.schoolId
+      });
       setSuccess(messages.S001("Lietotājs"));
       setShowCreateForm(false);
       setCreateFormData({
@@ -115,7 +130,8 @@ export default function AdminPanel() {
         name: "",
         last_name: "",
         number: "",
-        user_type: "normal"
+        user_type: "normal",
+        schoolId: null
       });
       loadUsers();
     } catch (err: any) {
@@ -124,6 +140,10 @@ export default function AdminPanel() {
         setError(messages.E003("E-pasts"));
       } else if (errorData?.number) {
         setError(messages.E005);
+      } else if (errorData?.skola) {
+        setError(Array.isArray(errorData.skola) ? errorData.skola[0] : errorData.skola);
+      } else if (errorData?.user_type) {
+        setError(Array.isArray(errorData.user_type) ? errorData.user_type[0] : errorData.user_type);
       } else {
         setError(errorData?.detail || "Neizdevās izveidot lietotāju");
       }
@@ -264,8 +284,13 @@ export default function AdminPanel() {
         user_type: userFormData.user_type
       };
       
-      // Update school if changed
-      if (userFormData.schoolId !== selectedUser.skola) {
+      // If changing to teacher, include school in update payload
+      if (userFormData.user_type === 'teacher' && userFormData.schoolId) {
+        updateData.skola = userFormData.schoolId;
+      }
+      
+      // Update school if changed (handle separately for non-teacher or if school is being removed)
+      if (userFormData.schoolId !== selectedUser.skola && !(userFormData.user_type === 'teacher' && updateData.skola)) {
         if (userFormData.schoolId) {
           await api.post("/api/schools/add-user/", {
             user_id: selectedUser.id,
@@ -477,7 +502,7 @@ export default function AdminPanel() {
             </div>
           )}
 
-          {showCreateForm && isAdmin && (
+          {showCreateForm && (isAdmin || isTeacher) && (
             <div className="mb-6 p-6 bg-[#1B2241] rounded-lg border border-[#3A4562]">
               <h3 className="text-xl font-bold text-white mb-4">Izveidot jaunu lietotāju</h3>
               <form onSubmit={handleCreateUser}>
@@ -536,12 +561,37 @@ export default function AdminPanel() {
                       value={createFormData.user_type}
                       onChange={(e) => setCreateFormData({ ...createFormData, user_type: e.target.value })}
                       className="w-full p-3 rounded-lg bg-[#252D47] border border-[#3A4562] text-white focus:outline-none focus:border-brand-gold"
+                      disabled={isTeacher}
                     >
-                      <option value="normal">Normal (R)</option>
-                      <option value="teacher">Teacher (S)</option>
-                      <option value="admin">Admin (A)</option>
+                      {isAdmin ? (
+                        <>
+                          <option value="normal">Normal (R)</option>
+                          <option value="teacher">Teacher (S)</option>
+                          <option value="admin">Admin (A)</option>
+                        </>
+                      ) : (
+                        <option value="normal">Normal (R)</option>
+                      )}
                     </select>
                   </div>
+                  {createFormData.user_type === "teacher" && (
+                    <div>
+                      <label className="block text-white mb-2 font-medium">Skola *</label>
+                      <select
+                        value={createFormData.schoolId || ""}
+                        onChange={(e) => setCreateFormData({ ...createFormData, schoolId: e.target.value ? parseInt(e.target.value) : null })}
+                        className="w-full p-3 rounded-lg bg-[#252D47] border border-[#3A4562] text-white focus:outline-none focus:border-brand-gold"
+                        required
+                      >
+                        <option value="">-- Izvēlieties skolu --</option>
+                        {schools.map((school) => (
+                          <option key={school.id} value={school.id}>
+                            {school.nosaukums}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-4">
                   <button
@@ -793,7 +843,7 @@ export default function AdminPanel() {
                         disabled={!isAdmin}
                         className="w-4 h-4 text-brand-gold"
                       />
-                      <span className="text-white">Darbinieks</span>
+                      <span className="text-white">Skolotājs</span>
                     </label>
                     <label className={`flex items-center gap-2 ${!isAdmin ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
                       <input
